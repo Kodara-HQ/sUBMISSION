@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 export function PageHeader({
   title,
   description,
@@ -5,7 +7,7 @@ export function PageHeader({
 }: {
   title: string;
   description?: string;
-  actions?: React.ReactNode;
+  actions?: ReactNode;
 }) {
   return (
     <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">

@@ -107,7 +107,7 @@ create table if not exists public.question_options (
 
 create table if not exists public.app_settings (
   id integer primary key default 1 check (id = 1),
-  organization_name text not null default 'Employee Submission Portal',
+  organization_name text not null default 'Employee Spotlight',
   allowed_file_types text[] not null default array['pdf','doc','docx','xls','xlsx','jpg','jpeg','png'],
   max_file_size_mb integer not null default 10 check (max_file_size_mb between 1 and 50),
   require_known_employee boolean not null default false,
@@ -894,7 +894,50 @@ grant execute on function public.lookup_employee(text) to anon, authenticated;
 grant execute on function public.submit_form(jsonb) to anon, authenticated;
 grant execute on function public.attach_submission_files(uuid, jsonb) to anon, authenticated;
 grant execute on function public.get_dashboard_stats() to authenticated;
+create or replace function public.claim_admin_invite()
+returns public.admin_users
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_row public.admin_users;
+  v_email text;
+begin
+  if auth.uid() is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  v_email := lower(coalesce(auth.jwt() ->> 'email', ''));
+  if v_email = '' then
+    raise exception 'Not authenticated';
+  end if;
+
+  update public.admin_users
+  set user_id = auth.uid(),
+      updated_at = now()
+  where lower(email) = v_email
+    and is_active = true
+    and (user_id is null or user_id = auth.uid())
+  returning * into v_row;
+
+  if v_row.id is null then
+    select * into v_row
+    from public.admin_users
+    where user_id = auth.uid()
+      and is_active = true;
+  end if;
+
+  if v_row.id is null then
+    return null;
+  end if;
+
+  return v_row;
+end;
+$$;
+
 grant execute on function public.bootstrap_admin() to authenticated;
+grant execute on function public.claim_admin_invite() to authenticated;
 
 -- ---------------------------------------------------------------------------
 -- Storage

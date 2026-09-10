@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 export function Card({
@@ -5,7 +6,7 @@ export function Card({
   children,
 }: {
   className?: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <section className={cn("rounded-xl border border-border bg-card shadow-sm", className)}>
@@ -21,7 +22,7 @@ export function CardHeader({
 }: {
   title: string;
   description?: string;
-  action?: React.ReactNode;
+  action?: ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-3 border-b border-border px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
@@ -39,7 +40,7 @@ export function CardBody({
   children,
 }: {
   className?: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return <div className={cn("p-5", className)}>{children}</div>;
 }

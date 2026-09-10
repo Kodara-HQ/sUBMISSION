@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
+import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
 const fieldClass =
@@ -11,15 +11,18 @@ export function Label({
 }: {
   htmlFor?: string;
   required?: boolean;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <label htmlFor={htmlFor} className="mb-1.5 block text-sm font-medium text-navy">
       {children}
       {required ? (
-        <span className="ml-1 text-danger" aria-hidden="true">
-          *
-        </span>
+        <>
+          <span className="ml-1 text-danger" aria-hidden="true">
+            *
+          </span>
+          <span className="sr-only"> (required)</span>
+        </>
       ) : null}
     </label>
   );
@@ -50,6 +53,6 @@ export function FieldError({ id, message }: { id?: string; message?: string }) {
   );
 }
 
-export function Hint({ children }: { children: React.ReactNode }) {
+export function Hint({ children }: { children: ReactNode }) {
   return <p className="mt-1 text-sm text-muted">{children}</p>;
 }

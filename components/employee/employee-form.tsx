@@ -1,0 +1,426 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { CheckCircle2 } from "lucide-react";
+import { QuestionField } from "@/components/employee/question-field";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { FieldError, Hint, Input, Label, Select } from "@/components/ui/fields";
+import { Spinner } from "@/components/ui/spinner";
+import { STORAGE_BUCKET } from "@/lib/constants";
+import { createClient } from "@/lib/supabase/client";
+import type {
+  Department,
+  FormAnswerPayload,
+  PublicSettings,
+  Question,
+  SubmissionType,
+} from "@/lib/types";
+import {
+  publicErrorMessage,
+  sanitizeFileName,
+  shortId,
+  todayISODate,
+} from "@/lib/utils";
+import {
+  emptyAnswer,
+  validateEmployeeFields,
+  validateQuestionAnswer,
+  validateUpload,
+  type FieldErrors,
+} from "@/lib/validations";
+
+type AnswerValue = string | string[] | File | null;
+
+const defaultSettings: PublicSettings = {
+  organization_name: "Employee Spotlight",
+  allowed_file_types: ["pdf", "doc", "docx", "xls", "xlsx", "jpg", "jpeg", "png"],
+  max_file_size_mb: 10,
+  require_known_employee: false,
+  prevent_duplicate_same_day: true,
+};
+
+export function EmployeeForm() {
+  const supabase = useMemo(() => {
+    try {
+      return createClient();
+    } catch {
+      return null;
+    }
+  }, []);
+  const submittedRef = useRef(false);
+
+  const [loading, setLoading] = useState(() => Boolean(supabase));
+  const [loadError, setLoadError] = useState(() =>
+    supabase ? "" : "The submission form is not configured yet. Please contact your administrator.",
+  );
+  const [settings, setSettings] = useState<PublicSettings>(defaultSettings);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [types, setTypes] = useState<SubmissionType[]>([]);
+  const [questions, setQuestions] = useState<Question[]>([]);
+
+  const [fullName, setFullName] = useState("");
+  const [identifier, setIdentifier] = useState("");
+  const [departmentId, setDepartmentId] = useState("");
+  const [submissionTypeId, setSubmissionTypeId] = useState("");
+  const [submissionDate, setSubmissionDate] = useState(todayISODate());
+  const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const [formError, setFormError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [successId, setSuccessId] = useState("");
+  const [lookupHint, setLookupHint] = useState("");
+
+  useEffect(() => {
+    if (!supabase) return;
+
+    const client = supabase;
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const [settingsRes, deptRes, typeRes, questionRes] = await Promise.all([
+          client.rpc("get_public_settings"),
+          client.from("departments").select("*").eq("is_active", true).order("name"),
+          client.from("submission_types").select("*").eq("is_active", true).order("name"),
+          client
+            .from("questions")
+            .select("*, question_options(*)")
+            .eq("is_active", true)
+            .order("sort_order"),
+        ]);
+
+        if (settingsRes.error || deptRes.error || typeRes.error || questionRes.error) {
+          throw new Error("load");
+        }
+
+        if (cancelled) return;
+
+        const row = Array.isArray(settingsRes.data) ? settingsRes.data[0] : settingsRes.data;
+        if (row) setSettings(row as PublicSettings);
+        setDepartments((deptRes.data || []) as Department[]);
+        setTypes((typeRes.data || []) as SubmissionType[]);
+        const loadedQuestions = ((questionRes.data || []) as Question[]).map((question) => ({
+          ...question,
+          question_options: (question.question_options || [])
+            .filter((option) => option.is_active)
+            .sort((a, b) => a.sort_order - b.sort_order),
+        }));
+        setQuestions(loadedQuestions);
+        setAnswers((current) => {
+          const next = { ...current };
+          for (const question of loadedQuestions) {
+            if (next[question.id] === undefined) next[question.id] = emptyAnswer(question.field_type);
+          }
+          return next;
+        });
+      } catch {
+        if (!cancelled) {
+          setLoadError("The submission form is temporarily unavailable. Please try again later.");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase]);
+
+  async function lookupEmployee() {
+    if (!supabase) return;
+    const value = identifier.trim();
+    if (value.length < 3) return;
+    const { data, error } = await supabase.rpc("lookup_employee", { identifier: value });
+    if (error) return;
+    const row = Array.isArray(data) ? data[0] : data;
+    if (row) {
+      setFullName((current) => current || row.full_name || "");
+      if (row.department_id) setDepartmentId(row.department_id);
+      setLookupHint("Employee record found. Some fields were filled in automatically.");
+    } else if (settings.require_known_employee) {
+      setLookupHint("");
+      setErrors((current) => ({
+        ...current,
+        identifier: "Employee ID or email was not found. Please contact your administrator.",
+      }));
+    } else {
+      setLookupHint("");
+    }
+  }
+
+  function validate() {
+    const next: FieldErrors = validateEmployeeFields({
+      fullName,
+      identifier,
+      departmentId,
+      submissionTypeId,
+      submissionDate,
+    });
+
+    for (const question of questions) {
+      const message = validateQuestionAnswer(question, answers[question.id]);
+      if (message) next[`q-${question.id}`] = message;
+    }
+
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  }
+
+  async function uploadFile(submissionId: string, file: File, questionId?: string) {
+    if (!supabase) throw new Error("Unable to submit the form. Please try again.");
+    const path = `uploads/${submissionId}/${crypto.randomUUID()}-${sanitizeFileName(file.name)}`;
+    const { error } = await supabase.storage.from(STORAGE_BUCKET).upload(path, file, {
+      upsert: false,
+      contentType: file.type || undefined,
+    });
+    if (error) {
+      throw new Error("A file could not be uploaded. Please try again.");
+    }
+    return {
+      file_name: file.name.slice(0, 180),
+      file_path: path,
+      file_size: file.size,
+      mime_type: file.type || "application/octet-stream",
+      question_id: questionId || null,
+    };
+  }
+
+  async function onSubmit(event: FormEvent) {
+    event.preventDefault();
+    setFormError("");
+    if (submittedRef.current || submitting) return;
+    if (!validate()) {
+      setFormError("Please correct the highlighted fields before submitting.");
+      return;
+    }
+
+    if (!supabase) {
+      setFormError("Unable to submit the form. Please try again.");
+      return;
+    }
+
+    setSubmitting(true);
+    submittedRef.current = true;
+
+    try {
+      const payloadAnswers: FormAnswerPayload[] = questions.map((question) => {
+        const value = answers[question.id];
+        if (question.field_type === "checkboxes") {
+          return {
+            question_id: question.id,
+            answer_json: Array.isArray(value) ? value : [],
+          };
+        }
+        if (question.field_type === "file") {
+          return { question_id: question.id, answer_text: value instanceof File ? value.name : null };
+        }
+        return {
+          question_id: question.id,
+          answer_text: typeof value === "string" ? value.trim() : null,
+        };
+      });
+
+      const { data, error } = await supabase.rpc("submit_form", {
+        payload: {
+          employee_full_name: fullName.trim(),
+          employee_identifier: identifier.trim(),
+          department_id: departmentId,
+          submission_type_id: submissionTypeId,
+          submission_date: submissionDate,
+          answers: payloadAnswers,
+        },
+      });
+
+      if (error) throw error;
+      const submissionId = String(data);
+
+      const uploads = questions
+        .filter((question) => question.field_type === "file" && answers[question.id] instanceof File)
+        .map((question) => uploadFile(submissionId, answers[question.id] as File, question.id));
+
+      if (uploads.length > 0) {
+        const files = await Promise.all(uploads);
+        const { error: attachError } = await supabase.rpc("attach_submission_files", {
+          p_submission_id: submissionId,
+          p_files: files,
+        });
+        if (attachError) {
+          setSuccessId(submissionId);
+          setFormError(
+            "Your submission was received, but one or more files could not be attached. Please contact your administrator with your reference number.",
+          );
+          return;
+        }
+      }
+
+      setSuccessId(submissionId);
+    } catch (error) {
+      submittedRef.current = false;
+      setFormError(publicErrorMessage(error, "Unable to submit the form. Please try again."));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (loading) return <Spinner label="Loading form" />;
+
+  if (loadError) {
+    return <Alert tone="error">{loadError}</Alert>;
+  }
+
+  if (successId) {
+    return (
+      <Card>
+        <CardBody className="py-12 text-center">
+          <CheckCircle2 className="mx-auto h-12 w-12 text-success" aria-hidden="true" />
+          <h2 className="mt-4 text-2xl font-semibold text-navy">Submission received</h2>
+          <p className="mx-auto mt-3 max-w-lg text-muted">
+            Your submission has been received successfully. Thank you.
+          </p>
+          <p className="mt-4 text-sm text-muted">
+            Reference number: <span className="font-medium text-navy">{shortId(successId)}</span>
+          </p>
+          {formError ? <p className="mx-auto mt-4 max-w-lg text-sm text-warning">{formError}</p> : null}
+        </CardBody>
+      </Card>
+    );
+  }
+
+  return (
+    <form onSubmit={onSubmit} noValidate className="space-y-6">
+      {formError ? <Alert tone="error">{formError}</Alert> : null}
+
+      <Card>
+        <CardHeader
+          title="Employee information"
+          description="Enter your details exactly as they appear in your employee record."
+        />
+        <CardBody className="grid gap-4 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <Label htmlFor="fullName" required>
+              Employee full name
+            </Label>
+            <Input
+              id="fullName"
+              autoComplete="name"
+              value={fullName}
+              onChange={(event) => setFullName(event.target.value)}
+              required
+              aria-invalid={Boolean(errors.fullName)}
+              aria-describedby={errors.fullName ? "fullName-error" : undefined}
+            />
+            <FieldError id="fullName-error" message={errors.fullName} />
+          </div>
+          <div className="sm:col-span-2">
+            <Label htmlFor="identifier" required>
+              Employee ID or email
+            </Label>
+            <Input
+              id="identifier"
+              autoComplete="email"
+              value={identifier}
+              onChange={(event) => setIdentifier(event.target.value)}
+              onBlur={lookupEmployee}
+              required
+              aria-invalid={Boolean(errors.identifier)}
+              aria-describedby={errors.identifier ? "identifier-error" : undefined}
+            />
+            {lookupHint ? <Hint>{lookupHint}</Hint> : null}
+            <FieldError id="identifier-error" message={errors.identifier} />
+          </div>
+          <div>
+            <Label htmlFor="department" required>
+              Department
+            </Label>
+            <Select
+              id="department"
+              value={departmentId}
+              onChange={(event) => setDepartmentId(event.target.value)}
+              required
+              aria-invalid={Boolean(errors.departmentId)}
+            >
+              <option value="">Select department</option>
+              {departments.map((department) => (
+                <option key={department.id} value={department.id}>
+                  {department.name}
+                </option>
+              ))}
+            </Select>
+            <FieldError message={errors.departmentId} />
+          </div>
+          <div>
+            <Label htmlFor="submissionType" required>
+              Submission type
+            </Label>
+            <Select
+              id="submissionType"
+              value={submissionTypeId}
+              onChange={(event) => setSubmissionTypeId(event.target.value)}
+              required
+              aria-invalid={Boolean(errors.submissionTypeId)}
+            >
+              <option value="">Select type</option>
+              {types.map((type) => (
+                <option key={type.id} value={type.id}>
+                  {type.name}
+                </option>
+              ))}
+            </Select>
+            <FieldError message={errors.submissionTypeId} />
+          </div>
+          <div>
+            <Label htmlFor="submissionDate" required>
+              Submission date
+            </Label>
+            <Input
+              id="submissionDate"
+              type="date"
+              value={submissionDate}
+              onChange={(event) => setSubmissionDate(event.target.value)}
+              required
+              aria-invalid={Boolean(errors.submissionDate)}
+            />
+            <FieldError message={errors.submissionDate} />
+          </div>
+        </CardBody>
+      </Card>
+
+      {questions.length > 0 ? (
+        <Card>
+          <CardHeader
+            title="Questions"
+            description="Required fields are marked with an asterisk."
+          />
+          <CardBody className="space-y-5">
+            {questions.map((question) => (
+              <QuestionField
+                key={question.id}
+                question={question}
+                value={answers[question.id] ?? emptyAnswer(question.field_type)}
+                error={errors[`q-${question.id}`]}
+                settings={settings}
+                onChange={(value) => {
+                  setAnswers((current) => ({ ...current, [question.id]: value }));
+                  if (question.field_type === "file" && value instanceof File) {
+                    const message = validateUpload(value, settings);
+                    setErrors((current) => ({ ...current, [`q-${question.id}`]: message }));
+                  }
+                }}
+              />
+            ))}
+          </CardBody>
+        </Card>
+      ) : null}
+
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+        <Button type="submit" size="lg" disabled={submitting}>
+          {submitting ? "Submitting…" : "Submit"}
+        </Button>
+      </div>
+    </form>
+  );
+}

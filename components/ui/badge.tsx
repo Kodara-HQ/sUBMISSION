@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 export function Badge({
@@ -5,7 +6,7 @@ export function Badge({
   children,
 }: {
   tone?: "neutral" | "success" | "warning" | "danger" | "accent";
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   const tones = {
     neutral: "bg-slate-100 text-slate-700",

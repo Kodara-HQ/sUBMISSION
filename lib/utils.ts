@@ -6,6 +6,10 @@ export function cn(...classes: Array<string | false | null | undefined>) {
 }
 
 export function publicErrorMessage(error: unknown, fallback: string) {
+  if (error && typeof error === "object" && "code" in error) {
+    const code = String((error as { code?: string }).code || "");
+    if (code === "23505") return "That record already exists.";
+  }
   if (error && typeof error === "object" && "message" in error) {
     const message = String((error as { message: string }).message || "");
     if (

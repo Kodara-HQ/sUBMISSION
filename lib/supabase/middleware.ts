@@ -1,7 +1,29 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { DEMO_COOKIE, isDemoMode } from "@/lib/demo/config";
 
 export async function updateSession(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+  const isAdminPath = path === "/admin" || path.startsWith("/admin/");
+  const isLogin = path === "/login";
+
+  if (isDemoMode()) {
+    const user = request.cookies.get(DEMO_COOKIE)?.value === "1";
+    if (isAdminPath && path !== "/admin/login" && !user) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/login";
+      redirectUrl.searchParams.set("next", path);
+      return NextResponse.redirect(redirectUrl);
+    }
+    if (isLogin && user) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/admin";
+      redirectUrl.search = "";
+      return NextResponse.redirect(redirectUrl);
+    }
+    return NextResponse.next({ request });
+  }
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -30,11 +52,7 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const path = request.nextUrl.pathname;
-  const isAdminPath = path === "/admin" || path.startsWith("/admin/");
-  const isLogin = path === "/login";
-
-  if (isAdminPath && !user) {
+  if (isAdminPath && path !== "/admin/login" && !user) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/login";
     redirectUrl.searchParams.set("next", path);

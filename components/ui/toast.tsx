@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 type Toast = { id: number; message: string; tone: "success" | "error" | "info" };
@@ -9,7 +9,7 @@ const ToastContext = createContext<{
   push: (message: string, tone?: Toast["tone"]) => void;
 } | null>(null);
 
-export function ToastProvider({ children }: { children: React.ReactNode }) {
+export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const push = useCallback((message: string, tone: Toast["tone"] = "info") => {
@@ -45,10 +45,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+const fallbackToast = { push: () => undefined };
+
 export function useToast() {
-  const context = useContext(ToastContext);
-  if (!context) {
-    return { push: () => undefined };
-  }
-  return context;
+  return useContext(ToastContext) ?? fallbackToast;
 }
