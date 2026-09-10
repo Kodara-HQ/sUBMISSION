@@ -230,7 +230,7 @@ export function SubmissionDetail({ id }: { id: string }) {
                 <p className="font-medium text-navy">{submission.employee_full_name}</p>
               </div>
               <div>
-                <p className="text-xs text-muted">Employee ID / email</p>
+                <p className="text-xs text-muted">Job title</p>
                 <p className="font-medium text-navy">{submission.employee_identifier}</p>
               </div>
               <div>

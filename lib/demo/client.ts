@@ -331,11 +331,13 @@ async function rpc(name: string, args: Record<string, unknown>, db: DemoDB, pers
     const type = db.submission_types.find((item) => item.id === payload.submission_type_id);
     if (!dept || !type) return fail("Please select a valid department and submission type.");
     const identifier = String(payload.employee_identifier || "").trim();
+    const fullName = String(payload.employee_full_name || "").trim();
+    if (identifier.length < 2) return fail("Please enter a valid job title.");
     const settings = db.app_settings[0];
     if (settings.prevent_duplicate_same_day) {
       const duplicate = db.submissions.some(
         (row) =>
-          String(row.employee_identifier).toLowerCase() === identifier.toLowerCase() &&
+          String(row.employee_full_name).toLowerCase() === fullName.toLowerCase() &&
           row.submission_type_id === type.id &&
           row.submission_date === payload.submission_date,
       );
@@ -343,21 +345,12 @@ async function rpc(name: string, args: Record<string, unknown>, db: DemoDB, pers
         return fail("A submission of this type has already been received for this employee on this date.");
       }
     }
-    const employee = db.employees.find(
-      (item) =>
-        item.is_active &&
-        (String(item.email || "").toLowerCase() === identifier.toLowerCase() ||
-          String(item.employee_id || "").toLowerCase() === identifier.toLowerCase()),
-    );
-    if (settings.require_known_employee && !employee) {
-      return fail("Employee ID or email was not found. Please contact your administrator.");
-    }
     const id = crypto.randomUUID();
     const created = nowIso();
     db.submissions.unshift({
       id,
-      employee_id: employee?.id || null,
-      employee_full_name: String(payload.employee_full_name || "").trim(),
+      employee_id: null,
+      employee_full_name: fullName,
       employee_identifier: identifier,
       department_id: dept.id,
       department_name: dept.name,

@@ -29,7 +29,7 @@ export function exportSubmissionsCsv(
   const headers = [
     "Reference",
     "Employee name",
-    "Employee ID/email",
+    "Job title",
     "Department",
     "Submission type",
     "Submission date",

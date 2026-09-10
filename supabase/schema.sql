@@ -349,7 +349,7 @@ begin
     if exists (
       select 1
       from public.submissions s
-      where lower(s.employee_identifier) = lower(new.employee_identifier)
+      where lower(s.employee_full_name) = lower(new.employee_full_name)
         and s.submission_type_id is not distinct from new.submission_type_id
         and s.submission_date = new.submission_date
         and s.id <> coalesce(new.id, '00000000-0000-0000-0000-000000000000'::uuid)
@@ -498,8 +498,8 @@ begin
   if v_name is null or char_length(v_name) < 2 or char_length(v_name) > 120 then
     raise exception 'Please enter a valid full name.';
   end if;
-  if v_identifier is null or char_length(v_identifier) < 3 or char_length(v_identifier) > 120 then
-    raise exception 'Please enter a valid employee ID or email.';
+  if v_identifier is null or char_length(v_identifier) < 2 or char_length(v_identifier) > 120 then
+    raise exception 'Please enter a valid job title.';
   end if;
 
   select * into v_dept_row from public.departments where id = v_dept and is_active = true;
@@ -514,19 +514,6 @@ begin
 
   if v_date > current_date + 1 then
     raise exception 'Please enter a valid submission date.';
-  end if;
-
-  select * into v_emp
-  from public.employees
-  where is_active = true
-    and (
-      lower(email) = lower(v_identifier)
-      or lower(employee_id) = lower(v_identifier)
-    )
-  limit 1;
-
-  if coalesce(v_settings.require_known_employee, false) and v_emp.id is null then
-    raise exception 'Employee ID or email was not found. Please contact your administrator.';
   end if;
 
   insert into public.submissions (

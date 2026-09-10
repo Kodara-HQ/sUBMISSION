@@ -6,7 +6,7 @@ import { QuestionField } from "@/components/employee/question-field";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
-import { FieldError, Hint, Input, Label, Select } from "@/components/ui/fields";
+import { FieldError, Input, Label, Select } from "@/components/ui/fields";
 import { Spinner } from "@/components/ui/spinner";
 import { STORAGE_BUCKET } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/client";
@@ -70,7 +70,6 @@ export function EmployeeForm() {
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [successId, setSuccessId] = useState("");
-  const [lookupHint, setLookupHint] = useState("");
 
   useEffect(() => {
     if (!supabase) return;
@@ -129,28 +128,6 @@ export function EmployeeForm() {
       cancelled = true;
     };
   }, [supabase]);
-
-  async function lookupEmployee() {
-    if (!supabase) return;
-    const value = identifier.trim();
-    if (value.length < 3) return;
-    const { data, error } = await supabase.rpc("lookup_employee", { identifier: value });
-    if (error) return;
-    const row = Array.isArray(data) ? data[0] : data;
-    if (row) {
-      setFullName((current) => current || row.full_name || "");
-      if (row.department_id) setDepartmentId(row.department_id);
-      setLookupHint("Employee record found. Some fields were filled in automatically.");
-    } else if (settings.require_known_employee) {
-      setLookupHint("");
-      setErrors((current) => ({
-        ...current,
-        identifier: "Employee ID or email was not found. Please contact your administrator.",
-      }));
-    } else {
-      setLookupHint("");
-    }
-  }
 
   function validate() {
     const next: FieldErrors = validateEmployeeFields({
@@ -297,7 +274,7 @@ export function EmployeeForm() {
       <Card>
         <CardHeader
           title="Employee information"
-          description="Enter your details exactly as they appear in your employee record."
+          description="Tell us who you are and your role at the organization."
         />
         <CardBody className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
@@ -317,19 +294,17 @@ export function EmployeeForm() {
           </div>
           <div className="sm:col-span-2">
             <Label htmlFor="identifier" required>
-              Employee ID or email
+              Job title
             </Label>
             <Input
               id="identifier"
-              autoComplete="email"
+              autoComplete="organization-title"
               value={identifier}
               onChange={(event) => setIdentifier(event.target.value)}
-              onBlur={lookupEmployee}
               required
               aria-invalid={Boolean(errors.identifier)}
               aria-describedby={errors.identifier ? "identifier-error" : undefined}
             />
-            {lookupHint ? <Hint>{lookupHint}</Hint> : null}
             <FieldError id="identifier-error" message={errors.identifier} />
           </div>
           <div>

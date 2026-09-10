@@ -17,7 +17,7 @@ export type DemoDB = {
   files: Record<string, { name: string; mime: string; dataUrl: string }>;
 };
 
-const STORAGE_KEY = "esp_demo_db_v2";
+const STORAGE_KEY = "esp_demo_db_v3";
 
 const D = {
   it: "11111111-1111-4111-8111-111111111111",
@@ -170,7 +170,7 @@ export function createSeedDb(): DemoDB {
         id: S.one,
         employee_id: E.alex,
         employee_full_name: "Alex Rivera",
-        employee_identifier: "EMP-1001",
+        employee_identifier: "Production Supervisor",
         department_id: D.production,
         department_name: "Production",
         submission_type_id: T.spotlight,
@@ -184,7 +184,7 @@ export function createSeedDb(): DemoDB {
         id: S.two,
         employee_id: E.jordan,
         employee_full_name: "Jordan Lee",
-        employee_identifier: "jordan.lee@example.com",
+        employee_identifier: "HR Officer",
         department_id: D.hr,
         department_name: "HR",
         submission_type_id: T.spotlight,
@@ -198,7 +198,7 @@ export function createSeedDb(): DemoDB {
         id: S.three,
         employee_id: E.sam,
         employee_full_name: "Sam Patel",
-        employee_identifier: "EMP-1003",
+        employee_identifier: "Accountant",
         department_id: D.finance,
         department_name: "Finance",
         submission_type_id: T.spotlight,

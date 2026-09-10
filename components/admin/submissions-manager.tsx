@@ -210,7 +210,7 @@ export function SubmissionsManager() {
       <Card className="mb-4 p-4">
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
           <Input
-            placeholder="Search name, email, ID, department, type"
+            placeholder="Search name, job title, department, type"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             aria-label="Search submissions"
@@ -258,7 +258,7 @@ export function SubmissionsManager() {
                 <thead className="bg-slate-50 text-muted">
                   <tr>
                     <th className="px-4 py-3 font-medium">Employee name</th>
-                    <th className="px-4 py-3 font-medium">Employee ID/email</th>
+                    <th className="px-4 py-3 font-medium">Job title</th>
                     <th className="px-4 py-3 font-medium">Department</th>
                     <th className="px-4 py-3 font-medium">Submission type</th>
                     <th className="px-4 py-3 font-medium">Submission date</th>

@@ -23,11 +23,8 @@ export function validateEmployeeFields(input: {
 
   if (fullName.length < 2) errors.fullName = "Enter the employee’s full name.";
   if (fullName.length > 120) errors.fullName = "Name is too long.";
-  if (identifier.length < 3) errors.identifier = "Enter an employee ID or email.";
-  if (identifier.length > 120) errors.identifier = "Employee ID or email is too long.";
-  if (identifier.includes("@") && !isEmail(identifier)) {
-    errors.identifier = "Enter a valid email address or an employee ID.";
-  }
+  if (identifier.length < 2) errors.identifier = "Enter a job title.";
+  if (identifier.length > 120) errors.identifier = "Job title is too long.";
   if (!input.departmentId) errors.departmentId = "Select a department.";
   if (!input.submissionTypeId) errors.submissionTypeId = "Select a submission type.";
   if (!input.submissionDate) errors.submissionDate = "Select a submission date.";
