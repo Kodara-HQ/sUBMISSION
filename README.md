@@ -102,9 +102,22 @@ Share `/employee-submit` with employees. Do not share `/admin`.
 
 1. Push this repository to GitHub.
 2. Import the project in Vercel (Next.js preset).
-3. Set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (or `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`), and `ADMIN_BOOTSTRAP_EMAIL`. Do **not** set `NEXT_PUBLIC_DEMO_MODE=true`.
-4. Add the production URL to Supabase Auth redirect URLs and Site URL.
-5. Deploy.
+3. Set these **Environment Variables** (Production + Preview):
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` (JWT anon key preferred)
+   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (optional fallback)
+   - `ADMIN_BOOTSTRAP_EMAIL`
+   - Do **not** set `NEXT_PUBLIC_DEMO_MODE=true`
+4. **Settings → Deployment Protection** → set to **None** (turn off Vercel Authentication).  
+   Otherwise phones and other devices will be forced to log in to Vercel before seeing the app.
+5. Deploy / Redeploy after changing env vars or protection.
+6. In Supabase **Auth → URL configuration**:
+   - Site URL = your Vercel production URL
+   - Redirect URLs include `https://YOUR-APP.vercel.app/auth/callback`
+7. Run `supabase/schema.sql`, then `supabase/seed.sql`. For a clean database run `supabase/clear-data.sql`.
+8. Create the admin Auth user, then run `supabase/bootstrap-admin.sql` (or sign in once with `ADMIN_BOOTSTRAP_EMAIL`).
+
+Share `/employee-submit` with employees. Do not share `/admin` widely.
 
 No service role key is required for the application.
 
