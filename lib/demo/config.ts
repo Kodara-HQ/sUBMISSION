@@ -8,7 +8,7 @@ export const DEMO_EMAIL = (
 )
   .trim()
   .toLowerCase();
-// Public demo credential used only when Supabase env vars are missing.
+// Public demo credential used only when NEXT_PUBLIC_DEMO_MODE=true.
 export const DEMO_PASSWORD = process.env.NEXT_PUBLIC_DEMO_PASSWORD || "BLOJRP922";
 export const DEMO_FULL_NAME =
   process.env.NEXT_PUBLIC_DEMO_FULL_NAME?.trim() || "Emmanuel Lamadeku";
@@ -16,10 +16,10 @@ export const DEMO_USER_ID = "00000000-0000-4000-8000-000000000001";
 export const DEMO_ADMIN_ID = "00000000-0000-4000-8000-000000000002";
 
 export function isDemoMode() {
+  // Demo is opt-in only. Auto-fallback caused per-browser data that never reached a shared system.
+  if (process.env.NEXT_PUBLIC_DEMO_MODE !== "true") return false;
   const { url, key } = getSupabasePublicConfig();
-  // If production env vars are missing, keep the form usable with local demo data.
-  if (!url || !key || url.includes("YOUR_PROJECT")) return true;
-  return process.env.NEXT_PUBLIC_DEMO_MODE === "true";
+  return !url || !key || url.includes("YOUR_PROJECT");
 }
 
 export function demoUser() {

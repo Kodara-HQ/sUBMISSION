@@ -107,7 +107,7 @@ Share `/employee-submit` with employees. Do not share `/admin`.
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY` (JWT anon key preferred)
    - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (optional fallback)
    - `ADMIN_BOOTSTRAP_EMAIL`
-   - Do **not** set `NEXT_PUBLIC_DEMO_MODE=true`
+   - Do **not** set `NEXT_PUBLIC_DEMO_MODE=true` on Vercel. Demo mode stores submissions in each browser only, so other devices will not see them.
 4. **Settings → Deployment Protection** → set to **None** (turn off Vercel Authentication).  
    Otherwise phones and other devices will be forced to log in to Vercel before seeing the app.
 5. Deploy / Redeploy after changing env vars or protection.

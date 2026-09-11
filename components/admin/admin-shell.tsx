@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { BrandLockup } from "@/components/brand-lockup";
+import { DemoModeBanner } from "@/components/demo-mode-banner";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import type { AdminUser } from "@/lib/types";
@@ -114,6 +115,7 @@ export function AdminShell({
           </div>
         ) : null}
         <main id="main-content" className="px-4 py-6 sm:px-6 lg:px-8">
+          <DemoModeBanner className="mb-6" />
           {children}
         </main>
       </div>

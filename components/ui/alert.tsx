@@ -5,10 +5,12 @@ export function Alert({
   tone = "info",
   title,
   children,
+  className,
 }: {
-  tone?: "info" | "success" | "error";
+  tone?: "info" | "success" | "error" | "warning";
   title?: string;
   children: ReactNode;
+  className?: string;
 }) {
   return (
     <div
@@ -18,6 +20,8 @@ export function Alert({
         tone === "info" && "border-border bg-white text-navy",
         tone === "success" && "border-success/20 bg-success-soft text-success",
         tone === "error" && "border-danger/20 bg-danger-soft text-danger",
+        tone === "warning" && "border-warning/30 bg-warning-soft text-warning",
+        className,
       )}
     >
       {title ? <p className="font-medium">{title}</p> : null}
