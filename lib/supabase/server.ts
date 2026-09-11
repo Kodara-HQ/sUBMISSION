@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { isDemoMode } from "@/lib/demo/config";
 import { createDemoClient } from "@/lib/demo/client";
+import { assertSupabasePublicConfig } from "@/lib/supabase/env";
 
 export async function createClient(): Promise<ReturnType<typeof createServerClient>> {
   if (isDemoMode()) {
@@ -15,12 +16,7 @@ export async function createClient(): Promise<ReturnType<typeof createServerClie
     >;
   }
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) {
-    throw new Error("Supabase is not configured.");
-  }
-
+  const { url, key } = assertSupabasePublicConfig();
   const cookieStore = await cookies();
 
   return createServerClient(url, key, {

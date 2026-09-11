@@ -46,11 +46,13 @@ Copy `.env.example` to `.env.local`:
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_jwt_key
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_key
 ADMIN_BOOTSTRAP_EMAIL=admin@your-organization.com
 ```
 
-- The anon key is safe for the browser when RLS is enabled. Never put the **service role** key in `NEXT_PUBLIC_*` variables or client code.
+- Prefer `NEXT_PUBLIC_SUPABASE_ANON_KEY` (JWT anon key). `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` is also accepted as a fallback.
+- These keys are safe for the browser when RLS is enabled. Never put the **service role** key in `NEXT_PUBLIC_*` variables or client code.
 - `ADMIN_BOOTSTRAP_EMAIL` is used only on the server. The first sign-in with this email can create the first super administrator if `admin_users` is empty.
 
 ## Supabase configuration
@@ -100,7 +102,7 @@ Share `/employee-submit` with employees. Do not share `/admin`.
 
 1. Push this repository to GitHub.
 2. Import the project in Vercel (Next.js preset).
-3. Set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `ADMIN_BOOTSTRAP_EMAIL`.
+3. Set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (or `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`), and `ADMIN_BOOTSTRAP_EMAIL`. Do **not** set `NEXT_PUBLIC_DEMO_MODE=true`.
 4. Add the production URL to Supabase Auth redirect URLs and Site URL.
 5. Deploy.
 

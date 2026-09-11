@@ -1,15 +1,12 @@
 import { createBrowserClient } from "@supabase/ssr";
 import { isDemoMode } from "@/lib/demo/config";
 import { createDemoClient } from "@/lib/demo/client";
+import { assertSupabasePublicConfig } from "@/lib/supabase/env";
 
 export function createClient(): ReturnType<typeof createBrowserClient> {
   if (isDemoMode()) {
     return createDemoClient() as unknown as ReturnType<typeof createBrowserClient>;
   }
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) {
-    throw new Error("Supabase is not configured.");
-  }
+  const { url, key } = assertSupabasePublicConfig();
   return createBrowserClient(url, key);
 }
