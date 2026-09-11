@@ -177,11 +177,11 @@ export function LoginForm() {
             email: trimmedEmail,
             password,
           }));
-        } else if (provision.status === 403) {
-          setError("Invalid email or password.");
-          return;
         } else {
-          setError(provisionBody.message || "Invalid email or password.");
+          setError(
+            provisionBody.message ||
+              "Invalid email or password. If this is the first login, set ADMIN_BOOTSTRAP_EMAIL in Vercel and reset the user password in Supabase Auth.",
+          );
           return;
         }
       }
@@ -193,7 +193,9 @@ export function LoginForm() {
             "Email confirmation is required. In Supabase: Authentication → Providers → Email → turn off Confirm email, then try again.",
           );
         } else {
-          setError("Invalid email or password.");
+          setError(
+            "Invalid email or password. Reset it in Supabase → Authentication → Users, or delete that user and sign in once to recreate the bootstrap admin.",
+          );
         }
         return;
       }
