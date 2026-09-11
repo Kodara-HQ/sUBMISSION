@@ -34,12 +34,16 @@ import {
 type AnswerValue = string | string[] | File | null;
 
 const defaultSettings: PublicSettings = {
-  organization_name: "Employee Spotlight",
+  organization_name: "Bloj Company LTD",
   allowed_file_types: ["pdf", "doc", "docx", "xls", "xlsx", "jpg", "jpeg", "png"],
   max_file_size_mb: 10,
   require_known_employee: false,
   prevent_duplicate_same_day: true,
 };
+
+function isSafetyTipType(type: SubmissionType | undefined) {
+  return (type?.name || "").trim().toLowerCase() === "safety tip";
+}
 
 export function EmployeeForm() {
   const supabase = useMemo(() => {
@@ -64,12 +68,18 @@ export function EmployeeForm() {
   const [identifier, setIdentifier] = useState("");
   const [departmentId, setDepartmentId] = useState("");
   const [submissionTypeId, setSubmissionTypeId] = useState("");
-  const [submissionDate, setSubmissionDate] = useState(todayISODate());
   const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [successId, setSuccessId] = useState("");
+
+  const selectedType = types.find((type) => type.id === submissionTypeId);
+  const anonymous = isSafetyTipType(selectedType);
+  const visibleQuestions = questions.filter(
+    (question) =>
+      !question.submission_type_id || question.submission_type_id === submissionTypeId,
+  );
 
   useEffect(() => {
     if (!supabase) return;
@@ -98,10 +108,13 @@ export function EmployeeForm() {
 
         const row = Array.isArray(settingsRes.data) ? settingsRes.data[0] : settingsRes.data;
         if (row) setSettings(row as PublicSettings);
-        setDepartments((deptRes.data || []) as Department[]);
-        setTypes((typeRes.data || []) as SubmissionType[]);
+        const loadedDepartments = (deptRes.data || []) as Department[];
+        const loadedTypes = (typeRes.data || []) as SubmissionType[];
+        setDepartments(loadedDepartments);
+        setTypes(loadedTypes);
         const loadedQuestions = ((questionRes.data || []) as Question[]).map((question) => ({
           ...question,
+          submission_type_id: question.submission_type_id ?? null,
           question_options: (question.question_options || [])
             .filter((option) => option.is_active)
             .sort((a, b) => a.sort_order - b.sort_order),
@@ -114,6 +127,7 @@ export function EmployeeForm() {
           }
           return next;
         });
+        if (loadedTypes.length === 1) setSubmissionTypeId(loadedTypes[0].id);
       } catch {
         if (!cancelled) {
           setLoadError("The submission form is temporarily unavailable. Please try again later.");
@@ -129,16 +143,23 @@ export function EmployeeForm() {
     };
   }, [supabase]);
 
+  useEffect(() => {
+    if (!anonymous) return;
+    const safetyDept = departments.find((department) => department.name.toLowerCase() === "safety");
+    if (safetyDept && !departmentId) setDepartmentId(safetyDept.id);
+  }, [anonymous, departments, departmentId]);
+
   function validate() {
     const next: FieldErrors = validateEmployeeFields({
       fullName,
       identifier,
       departmentId,
       submissionTypeId,
-      submissionDate,
+      submissionDate: todayISODate(),
+      anonymous,
     });
 
-    for (const question of questions) {
+    for (const question of visibleQuestions) {
       const message = validateQuestionAnswer(question, answers[question.id]);
       if (message) next[`q-${question.id}`] = message;
     }
@@ -184,7 +205,7 @@ export function EmployeeForm() {
     submittedRef.current = true;
 
     try {
-      const payloadAnswers: FormAnswerPayload[] = questions.map((question) => {
+      const payloadAnswers: FormAnswerPayload[] = visibleQuestions.map((question) => {
         const value = answers[question.id];
         if (question.field_type === "checkboxes") {
           return {
@@ -203,11 +224,11 @@ export function EmployeeForm() {
 
       const { data, error } = await supabase.rpc("submit_form", {
         payload: {
-          employee_full_name: fullName.trim(),
-          employee_identifier: identifier.trim(),
+          employee_full_name: anonymous ? "Anonymous" : fullName.trim(),
+          employee_identifier: anonymous ? "Safety Tip" : identifier.trim(),
           department_id: departmentId,
           submission_type_id: submissionTypeId,
-          submission_date: submissionDate,
+          submission_date: todayISODate(),
           answers: payloadAnswers,
         },
       });
@@ -215,7 +236,7 @@ export function EmployeeForm() {
       if (error) throw error;
       const submissionId = String(data);
 
-      const uploads = questions
+      const uploads = visibleQuestions
         .filter((question) => question.field_type === "file" && answers[question.id] instanceof File)
         .map((question) => uploadFile(submissionId, answers[question.id] as File, question.id));
 
@@ -273,105 +294,124 @@ export function EmployeeForm() {
 
       <Card>
         <CardHeader
-          title="Employee information"
-          description="Tell us who you are and your role at the organization."
+          title="What are you submitting?"
+          description="Your choice controls the questions and whether your name is collected."
         />
-        <CardBody className="grid gap-4 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            <Label htmlFor="fullName" required>
-              Employee full name
-            </Label>
-            <Input
-              id="fullName"
-              autoComplete="name"
-              value={fullName}
-              onChange={(event) => setFullName(event.target.value)}
-              required
-              aria-invalid={Boolean(errors.fullName)}
-              aria-describedby={errors.fullName ? "fullName-error" : undefined}
-            />
-            <FieldError id="fullName-error" message={errors.fullName} />
+        <CardBody className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Submission type">
+            {types.map((type) => {
+              const selected = submissionTypeId === type.id;
+              const tip = isSafetyTipType(type);
+              return (
+                <button
+                  key={type.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => {
+                    setSubmissionTypeId(type.id);
+                    setErrors({});
+                    setFormError("");
+                  }}
+                  className={
+                    selected
+                      ? "rounded-xl border-2 border-accent bg-accent-soft/40 p-4 text-left shadow-sm"
+                      : "rounded-xl border border-border bg-white p-4 text-left hover:border-accent/50"
+                  }
+                >
+                  <p className="font-semibold text-navy">{type.name}</p>
+                  <p className="mt-1 text-sm text-muted">
+                    {tip
+                      ? "One anonymous tip. No name required."
+                      : "Spotlight questionnaire with your name and role."}
+                  </p>
+                </button>
+              );
+            })}
           </div>
-          <div className="sm:col-span-2">
-            <Label htmlFor="identifier" required>
-              Job title
-            </Label>
-            <Input
-              id="identifier"
-              autoComplete="organization-title"
-              value={identifier}
-              onChange={(event) => setIdentifier(event.target.value)}
-              required
-              aria-invalid={Boolean(errors.identifier)}
-              aria-describedby={errors.identifier ? "identifier-error" : undefined}
-            />
-            <FieldError id="identifier-error" message={errors.identifier} />
-          </div>
-          <div>
-            <Label htmlFor="department" required>
-              Department
-            </Label>
-            <Select
-              id="department"
-              value={departmentId}
-              onChange={(event) => setDepartmentId(event.target.value)}
-              required
-              aria-invalid={Boolean(errors.departmentId)}
-            >
-              <option value="">Select department</option>
-              {departments.map((department) => (
-                <option key={department.id} value={department.id}>
-                  {department.name}
-                </option>
-              ))}
-            </Select>
-            <FieldError message={errors.departmentId} />
-          </div>
-          <div>
-            <Label htmlFor="submissionType" required>
-              Submission type
-            </Label>
-            <Select
-              id="submissionType"
-              value={submissionTypeId}
-              onChange={(event) => setSubmissionTypeId(event.target.value)}
-              required
-              aria-invalid={Boolean(errors.submissionTypeId)}
-            >
-              <option value="">Select type</option>
-              {types.map((type) => (
-                <option key={type.id} value={type.id}>
-                  {type.name}
-                </option>
-              ))}
-            </Select>
-            <FieldError message={errors.submissionTypeId} />
-          </div>
-          <div>
-            <Label htmlFor="submissionDate" required>
-              Submission date
-            </Label>
-            <Input
-              id="submissionDate"
-              type="date"
-              value={submissionDate}
-              onChange={(event) => setSubmissionDate(event.target.value)}
-              required
-              aria-invalid={Boolean(errors.submissionDate)}
-            />
-            <FieldError message={errors.submissionDate} />
-          </div>
+          <FieldError message={errors.submissionTypeId} />
         </CardBody>
       </Card>
 
-      {questions.length > 0 ? (
+      {!anonymous && submissionTypeId ? (
         <Card>
           <CardHeader
-            title="Questions"
-            description="Required fields are marked with an asterisk."
+            title="Employee information"
+            description="Tell us who you are and your role at the organization."
+          />
+          <CardBody className="grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <Label htmlFor="fullName" required>
+                Employee full name
+              </Label>
+              <Input
+                id="fullName"
+                autoComplete="name"
+                value={fullName}
+                onChange={(event) => setFullName(event.target.value)}
+                required
+                aria-invalid={Boolean(errors.fullName)}
+                aria-describedby={errors.fullName ? "fullName-error" : undefined}
+              />
+              <FieldError id="fullName-error" message={errors.fullName} />
+            </div>
+            <div className="sm:col-span-2">
+              <Label htmlFor="identifier" required>
+                Job title
+              </Label>
+              <Input
+                id="identifier"
+                autoComplete="organization-title"
+                value={identifier}
+                onChange={(event) => setIdentifier(event.target.value)}
+                required
+                aria-invalid={Boolean(errors.identifier)}
+                aria-describedby={errors.identifier ? "identifier-error" : undefined}
+              />
+              <FieldError id="identifier-error" message={errors.identifier} />
+            </div>
+            <div className="sm:col-span-2">
+              <Label htmlFor="department" required>
+                Department
+              </Label>
+              <Select
+                id="department"
+                value={departmentId}
+                onChange={(event) => setDepartmentId(event.target.value)}
+                required
+                aria-invalid={Boolean(errors.departmentId)}
+              >
+                <option value="">Select department</option>
+                {departments.map((department) => (
+                  <option key={department.id} value={department.id}>
+                    {department.name}
+                  </option>
+                ))}
+              </Select>
+              <FieldError message={errors.departmentId} />
+            </div>
+          </CardBody>
+        </Card>
+      ) : null}
+
+      {anonymous ? (
+        <Alert tone="info" title="Anonymous safety tip">
+          You do not need to enter your name. Only share the tip below.
+        </Alert>
+      ) : null}
+
+      {submissionTypeId && visibleQuestions.length > 0 ? (
+        <Card>
+          <CardHeader
+            title={anonymous ? "Safety tip" : "Questions"}
+            description={
+              anonymous
+                ? "Share one tip that could help keep others safe."
+                : "Required fields are marked with an asterisk."
+            }
           />
           <CardBody className="space-y-5">
-            {questions.map((question) => (
+            {visibleQuestions.map((question) => (
               <QuestionField
                 key={question.id}
                 question={question}
@@ -392,7 +432,7 @@ export function EmployeeForm() {
       ) : null}
 
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-        <Button type="submit" size="lg" disabled={submitting}>
+        <Button type="submit" size="lg" disabled={submitting || !submissionTypeId}>
           {submitting ? "Submitting…" : "Submit"}
         </Button>
       </div>

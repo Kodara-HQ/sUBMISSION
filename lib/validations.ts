@@ -16,18 +16,25 @@ export function validateEmployeeFields(input: {
   departmentId: string;
   submissionTypeId: string;
   submissionDate: string;
+  anonymous?: boolean;
 }) {
   const errors: FieldErrors = {};
   const fullName = input.fullName.trim();
   const identifier = input.identifier.trim();
+
+  if (!input.submissionTypeId) errors.submissionTypeId = "Select a submission type.";
+  if (!input.submissionDate) errors.submissionDate = "Select a submission date.";
+
+  if (input.anonymous) {
+    if (!input.departmentId) errors.departmentId = "Select a department.";
+    return errors;
+  }
 
   if (fullName.length < 2) errors.fullName = "Enter the employee’s full name.";
   if (fullName.length > 120) errors.fullName = "Name is too long.";
   if (identifier.length < 2) errors.identifier = "Enter a job title.";
   if (identifier.length > 120) errors.identifier = "Job title is too long.";
   if (!input.departmentId) errors.departmentId = "Select a department.";
-  if (!input.submissionTypeId) errors.submissionTypeId = "Select a submission type.";
-  if (!input.submissionDate) errors.submissionDate = "Select a submission date.";
 
   return errors;
 }

@@ -6,26 +6,38 @@ export default function Home() {
     <div className="flex min-h-full flex-col">
       <PublicHeader />
       <main id="main-content" className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 py-10">
-        <p className="text-sm font-medium text-accent">Internal use only</p>
+        <p className="text-sm font-medium text-accent">Bloj Company LTD</p>
         <h1 className="mt-2 max-w-2xl text-3xl font-semibold tracking-tight text-navy sm:text-4xl">
-          Employee Spotlight
+          Employee submissions
         </h1>
         <p className="mt-3 max-w-2xl text-muted">
-          Employees complete the spotlight questionnaire. Administrators review and manage
+          Share an Employee Spotlight story or an anonymous Safety Tip. Administrators review
           submissions from a secure dashboard.
         </p>
 
-        <div className="mt-8 grid gap-4 md:grid-cols-2">
+        <div className="mt-8 grid gap-4 md:grid-cols-3">
           <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
             <h2 className="text-base font-semibold text-navy">Employee Spotlight</h2>
             <p className="mt-1 text-sm text-muted">
-              Open the questionnaire and answer the four questions.
+              Answer the four spotlight questions about your mining career.
             </p>
             <Link
               href="/employee-submit"
               className="mt-5 inline-flex h-12 items-center justify-center rounded-lg bg-accent px-5 text-base font-medium text-white hover:bg-accent-hover"
             >
               Start a spotlight
+            </Link>
+          </section>
+          <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
+            <h2 className="text-base font-semibold text-navy">Safety Tip</h2>
+            <p className="mt-1 text-sm text-muted">
+              Submit one anonymous tip. No name is required.
+            </p>
+            <Link
+              href="/employee-submit"
+              className="mt-5 inline-flex h-12 items-center justify-center rounded-lg bg-accent px-5 text-base font-medium text-white hover:bg-accent-hover"
+            >
+              Share a safety tip
             </Link>
           </section>
           <section className="rounded-xl border border-border bg-card p-5 shadow-sm">

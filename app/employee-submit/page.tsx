@@ -2,17 +2,19 @@ import { EmployeeForm } from "@/components/employee/employee-form";
 import { PublicHeader } from "@/components/public-header";
 
 export const metadata = {
-  title: "Employee Spotlight",
+  title: "Submit",
 };
 
 export default function EmployeeSubmitPage() {
   return (
     <div className="flex min-h-full flex-col">
-      <PublicHeader />
+      <PublicHeader showAdminLink={false} showHomeLink={false} centered />
       <main id="main-content" className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
-        <h1 className="text-2xl font-semibold tracking-tight text-navy">Employee Spotlight</h1>
-        <p className="mt-1 mb-6 text-sm text-muted">
-          Complete the questionnaire below. Required fields are marked with an asterisk (*).
+        <h1 className="text-center text-2xl font-semibold tracking-tight text-navy">
+          Share a submission
+        </h1>
+        <p className="mx-auto mt-1 mb-6 max-w-xl text-center text-sm text-muted">
+          Choose a submission type below. Required fields are marked with an asterisk (*).
         </p>
         <EmployeeForm />
       </main>

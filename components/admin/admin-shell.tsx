@@ -14,6 +14,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { BrandLockup } from "@/components/brand-lockup";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import type { AdminUser } from "@/lib/types";
@@ -53,9 +54,8 @@ export function AdminShell({
 
   const sidebar = (
     <div className="flex h-full flex-col bg-navy text-white">
-      <div className="border-b border-white/10 px-5 py-5">
-        <p className="text-xs tracking-wide text-white/60 uppercase">Admin</p>
-        <p className="mt-1 text-lg font-semibold">Submission Portal</p>
+      <div className="border-b border-white/10 px-4 py-3">
+        <BrandLockup subtitle="Admin" />
       </div>
       <nav className="flex-1 space-y-1 p-3" aria-label="Admin">
         {nav.map((item) => {
@@ -98,7 +98,7 @@ export function AdminShell({
       <div className="hidden md:fixed md:inset-y-0 md:flex md:w-64 md:flex-col">{sidebar}</div>
       <div className="md:pl-64">
         <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-white px-4 py-3 md:hidden">
-          <p className="font-semibold text-navy">Admin</p>
+          <BrandLockup compact subtitle="Admin" tone="onLight" />
           <Button variant="ghost" onClick={() => setOpen((value) => !value)} aria-label="Open menu">
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>

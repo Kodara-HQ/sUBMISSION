@@ -42,7 +42,14 @@ function matchIlike(value: unknown, needle: string) {
 function applyFilters(rows: DemoRow[], filters: Filter[]) {
   return rows.filter((row) =>
     filters.every((filter) => {
-      if (filter.kind === "eq") return row[filter.field] === filter.value;
+      if (filter.kind === "eq") {
+        const left = row[filter.field];
+        const right = filter.value;
+        if (typeof left === "boolean" || typeof right === "boolean") {
+          return Boolean(left) === Boolean(right);
+        }
+        return left === right;
+      }
       if (filter.kind === "in") return filter.values.includes(row[filter.field]);
       if (filter.kind === "gte") return String(row[filter.field] ?? "") >= filter.value;
       if (filter.kind === "lte") return String(row[filter.field] ?? "") <= filter.value;
@@ -332,9 +339,11 @@ async function rpc(name: string, args: Record<string, unknown>, db: DemoDB, pers
     if (!dept || !type) return fail("Please select a valid department and submission type.");
     const identifier = String(payload.employee_identifier || "").trim();
     const fullName = String(payload.employee_full_name || "").trim();
-    if (identifier.length < 2) return fail("Please enter a valid job title.");
+    const isAnonymous = String(type.name).toLowerCase() === "safety tip";
+    if (!isAnonymous && identifier.length < 2) return fail("Please enter a valid job title.");
+    if (isAnonymous && fullName.length < 2) return fail("Unable to submit the form. Please try again.");
     const settings = db.app_settings[0];
-    if (settings.prevent_duplicate_same_day) {
+    if (settings.prevent_duplicate_same_day && !isAnonymous) {
       const duplicate = db.submissions.some(
         (row) =>
           String(row.employee_full_name).toLowerCase() === fullName.toLowerCase() &&
@@ -350,8 +359,8 @@ async function rpc(name: string, args: Record<string, unknown>, db: DemoDB, pers
     db.submissions.unshift({
       id,
       employee_id: null,
-      employee_full_name: fullName,
-      employee_identifier: identifier,
+      employee_full_name: isAnonymous ? "Anonymous" : fullName,
+      employee_identifier: isAnonymous ? "Safety Tip" : identifier,
       department_id: dept.id,
       department_name: dept.name,
       submission_type_id: type.id,
@@ -362,16 +371,31 @@ async function rpc(name: string, args: Record<string, unknown>, db: DemoDB, pers
       updated_at: created,
     });
     const answers = Array.isArray(payload.answers) ? (payload.answers as DemoRow[]) : [];
-    for (const question of db.questions.filter((item) => item.is_active)) {
+    for (const question of db.questions.filter(
+      (item) =>
+        item.is_active &&
+        (!item.submission_type_id || item.submission_type_id === type.id),
+    )) {
       const answer = answers.find((item) => item.question_id === question.id);
+      const text = answer?.answer_text ?? null;
+      const json = answer?.answer_json ?? null;
+      if (question.is_required && question.field_type !== "file") {
+        if (question.field_type === "checkboxes") {
+          if (!Array.isArray(json) || json.length === 0) {
+            return fail("Please complete all required questions.");
+          }
+        } else if (!text || String(text).trim().length === 0) {
+          return fail("Please complete all required questions.");
+        }
+      }
       db.submission_answers.push({
         id: crypto.randomUUID(),
         submission_id: id,
         question_id: question.id,
         question_label: question.label,
         field_type: question.field_type,
-        answer_text: answer?.answer_text ?? null,
-        answer_json: answer?.answer_json ?? null,
+        answer_text: text,
+        answer_json: json,
         created_at: created,
         updated_at: created,
       });

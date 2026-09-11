@@ -89,10 +89,14 @@ create table if not exists public.questions (
   is_required boolean not null default false,
   is_active boolean not null default true,
   sort_order integer not null default 0,
+  submission_type_id uuid references public.submission_types (id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint questions_label_len check (char_length(trim(label)) between 1 and 240)
 );
+
+alter table public.questions
+  add column if not exists submission_type_id uuid references public.submission_types (id) on delete set null;
 
 create table if not exists public.question_options (
   id uuid primary key default gen_random_uuid(),
@@ -107,7 +111,7 @@ create table if not exists public.question_options (
 
 create table if not exists public.app_settings (
   id integer primary key default 1 check (id = 1),
-  organization_name text not null default 'Employee Spotlight',
+  organization_name text not null default 'Bloj Company LTD',
   allowed_file_types text[] not null default array['pdf','doc','docx','xls','xlsx','jpg','jpeg','png'],
   max_file_size_mb integer not null default 10 check (max_file_size_mb between 1 and 50),
   require_known_employee boolean not null default false,
@@ -345,7 +349,7 @@ declare
   prevent boolean;
 begin
   select prevent_duplicate_same_day into prevent from public.app_settings where id = 1;
-  if coalesce(prevent, true) then
+  if coalesce(prevent, true) and lower(trim(new.employee_full_name)) <> 'anonymous' then
     if exists (
       select 1
       from public.submissions s
@@ -540,7 +544,10 @@ begin
   returning id into v_id;
 
   for v_q in
-    select * from public.questions where is_active = true order by sort_order, created_at
+    select * from public.questions
+    where is_active = true
+      and (submission_type_id is null or submission_type_id = v_type)
+    order by sort_order, created_at
   loop
     select elem
       into v_ans

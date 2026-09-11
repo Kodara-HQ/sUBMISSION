@@ -14,10 +14,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Employee Spotlight",
-    template: "%s | Employee Spotlight",
+    default: "Bloj Company LTD",
+    template: "%s | Bloj Company LTD",
   },
-  description: "Employee Spotlight questionnaire and administrator review portal.",
+  description: "Bloj Company LTD Employee Spotlight questionnaire and administrator review portal.",
   robots: { index: false, follow: false },
 };
 

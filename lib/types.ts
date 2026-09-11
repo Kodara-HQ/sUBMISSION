@@ -86,6 +86,7 @@ export type Question = {
   is_required: boolean;
   is_active: boolean;
   sort_order: number;
+  submission_type_id: string | null;
   created_at: string;
   updated_at: string;
   question_options?: QuestionOption[];

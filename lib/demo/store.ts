@@ -17,7 +17,7 @@ export type DemoDB = {
   files: Record<string, { name: string; mime: string; dataUrl: string }>;
 };
 
-const STORAGE_KEY = "esp_demo_db_v3";
+const STORAGE_KEY = "esp_demo_db_v6";
 
 const D = {
   it: "11111111-1111-4111-8111-111111111111",
@@ -31,6 +31,7 @@ const D = {
 
 const T = {
   spotlight: "88888888-8888-4888-8888-888888888880",
+  safetyTip: "88888888-8888-4888-8888-888888888885",
 };
 
 const Q = {
@@ -38,6 +39,7 @@ const Q = {
   lesson: "88888888-8888-4888-8888-888888888882",
   fiveYears: "88888888-8888-4888-8888-888888888883",
   message: "88888888-8888-4888-8888-888888888884",
+  safetyTip: "88888888-8888-4888-8888-888888888886",
 };
 
 const E = {
@@ -82,6 +84,14 @@ export function createSeedDb(): DemoDB {
         created_at: isoDaysAgo(40),
         updated_at: isoDaysAgo(40),
       },
+      {
+        id: T.safetyTip,
+        name: "Safety Tip",
+        description: "Anonymous safety tip submission",
+        is_active: true,
+        created_at: isoDaysAgo(40),
+        updated_at: isoDaysAgo(40),
+      },
     ],
     employees: [
       { id: E.alex, full_name: "Alex Rivera", employee_id: "EMP-1001", email: "alex.rivera@example.com", department_id: D.production, is_active: true, created_at: isoDaysAgo(30), updated_at: isoDaysAgo(30) },
@@ -110,6 +120,7 @@ export function createSeedDb(): DemoDB {
         is_required: true,
         is_active: true,
         sort_order: 10,
+        submission_type_id: T.spotlight,
         created_at: isoDaysAgo(40),
         updated_at: isoDaysAgo(40),
       },
@@ -122,6 +133,7 @@ export function createSeedDb(): DemoDB {
         is_required: true,
         is_active: true,
         sort_order: 20,
+        submission_type_id: T.spotlight,
         created_at: isoDaysAgo(40),
         updated_at: isoDaysAgo(40),
       },
@@ -134,6 +146,7 @@ export function createSeedDb(): DemoDB {
         is_required: true,
         is_active: true,
         sort_order: 30,
+        submission_type_id: T.spotlight,
         created_at: isoDaysAgo(40),
         updated_at: isoDaysAgo(40),
       },
@@ -146,6 +159,20 @@ export function createSeedDb(): DemoDB {
         is_required: true,
         is_active: true,
         sort_order: 40,
+        submission_type_id: T.spotlight,
+        created_at: isoDaysAgo(40),
+        updated_at: isoDaysAgo(40),
+      },
+      {
+        id: Q.safetyTip,
+        label: "What is your safety tip?",
+        help_text: null,
+        placeholder: "Share a safety tip that could help keep others safe",
+        field_type: "long_text",
+        is_required: true,
+        is_active: true,
+        sort_order: 10,
+        submission_type_id: T.safetyTip,
         created_at: isoDaysAgo(40),
         updated_at: isoDaysAgo(40),
       },
@@ -154,7 +181,7 @@ export function createSeedDb(): DemoDB {
     app_settings: [
       {
         id: 1,
-        organization_name: "Employee Spotlight",
+        organization_name: "Bloj Company LTD",
         allowed_file_types: ["pdf", "doc", "docx", "xls", "xlsx", "jpg", "jpeg", "png"],
         max_file_size_mb: 10,
         require_known_employee: false,
@@ -242,6 +269,34 @@ function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
+function ensureCatalog(db: DemoDB): DemoDB {
+  const seed = createSeedDb();
+  for (const type of seed.submission_types) {
+    const existing = db.submission_types.find((row) => row.id === type.id || row.name === type.name);
+    if (!existing) {
+      db.submission_types.push(clone(type));
+    } else {
+      existing.is_active = true;
+      existing.name = type.name;
+      existing.description = type.description;
+    }
+  }
+  for (const question of seed.questions) {
+    const existing = db.questions.find((row) => row.id === question.id || row.label === question.label);
+    if (!existing) {
+      db.questions.push(clone(question));
+    } else {
+      existing.is_active = true;
+      existing.submission_type_id = question.submission_type_id;
+      existing.label = question.label;
+      existing.field_type = question.field_type;
+      existing.is_required = question.is_required;
+      existing.sort_order = question.sort_order;
+    }
+  }
+  return db;
+}
+
 export function loadDemoDb(): DemoDB {
   if (typeof window === "undefined") return createSeedDb();
   try {
@@ -251,7 +306,9 @@ export function loadDemoDb(): DemoDB {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
       return seed;
     }
-    return JSON.parse(raw) as DemoDB;
+    const db = ensureCatalog(JSON.parse(raw) as DemoDB);
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(clone(db)));
+    return db;
   } catch {
     return createSeedDb();
   }
