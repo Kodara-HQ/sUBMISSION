@@ -102,15 +102,15 @@ Share `/employee-submit` with employees. Do not share `/admin`.
 
 1. Push this repository to GitHub.
 2. Import the project in Vercel (Next.js preset).
-3. Set these **Environment Variables** (Production + Preview):
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` (JWT anon key preferred)
-   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (optional fallback)
+3. Set these **Environment Variables** for **Production** (and Preview if needed):
+   - `SUPABASE_URL` = `https://YOUR_PROJECT.supabase.co` (recommended — read at request time)
+   - `SUPABASE_ANON_KEY` = your JWT anon key (`eyJ...`) (recommended)
+   - `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` (optional duplicates)
    - `ADMIN_BOOTSTRAP_EMAIL`
-   - Do **not** set `NEXT_PUBLIC_DEMO_MODE=true` on Vercel. Production always uses Supabase so every browser shares one database.
-4. **Settings → Deployment Protection** → set to **None** (turn off Vercel Authentication).  
+   - Do **not** set `NEXT_PUBLIC_DEMO_MODE=true` on Vercel
+4. After adding or changing env vars: **Deployments → … → Redeploy** and turn **OFF** “Use existing Build Cache”.
+5. **Settings → Deployment Protection** → set to **None** (turn off Vercel Authentication).  
    Otherwise phones and other browsers get a Vercel login page and never reach your form — submissions will look like they “don’t go to the system.”
-5. Deploy / Redeploy after changing env vars or protection.
 6. In Supabase **Auth → URL configuration**:
    - Site URL = your Vercel production URL
    - Redirect URLs include `https://YOUR-APP.vercel.app/auth/callback`

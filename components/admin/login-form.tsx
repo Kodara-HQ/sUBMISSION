@@ -2,31 +2,89 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Input, Label } from "@/components/ui/fields";
 import { isDemoMode } from "@/lib/demo/config";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { isSupabaseConfigured, setRuntimeSupabaseConfig } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/client";
+
+const CONFIG_HELP =
+  "Supabase is not configured on this deployment. In Vercel → Settings → Environment Variables, add for Production: SUPABASE_URL, SUPABASE_ANON_KEY (eyJ… JWT), and ADMIN_BOOTSTRAP_EMAIL. Then Redeploy with “Use existing Build Cache” turned OFF.";
 
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = searchParams.get("next") || "/admin";
   const demo = isDemoMode();
-  const configured = demo || isSupabaseConfigured();
+  const [configured, setConfigured] = useState(() => demo || isSupabaseConfigured());
+  const [checkingConfig, setCheckingConfig] = useState(() => !demo && !isSupabaseConfigured());
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState(
-    searchParams.get("error") === "auth"
-      ? "Sign-in could not be completed."
-      : !configured
-        ? "Supabase is not configured on this deployment. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel, then redeploy."
-        : "",
-  );
+  const [error, setError] = useState(searchParams.get("error") === "auth" ? "Sign-in could not be completed." : "");
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (demo) {
+      setConfigured(true);
+      setCheckingConfig(false);
+      return;
+    }
+
+    if (isSupabaseConfigured()) {
+      setConfigured(true);
+      setCheckingConfig(false);
+      setError((current) => (current === CONFIG_HELP ? "" : current));
+      return;
+    }
+
+    let cancelled = false;
+    setCheckingConfig(true);
+
+    (async () => {
+      try {
+        const response = await fetch("/api/public-config", { cache: "no-store" });
+        const body = (await response.json()) as {
+          configured?: boolean;
+          url?: string;
+          key?: string;
+          hasUrl?: boolean;
+          hasKey?: boolean;
+        };
+        if (cancelled) return;
+        if (body.configured && body.url && body.key) {
+          setRuntimeSupabaseConfig({ url: body.url, key: body.key });
+          setConfigured(true);
+          setError((current) => (current === CONFIG_HELP ? "" : current));
+        } else {
+          setConfigured(false);
+          setError(CONFIG_HELP);
+        }
+      } catch {
+        if (!cancelled) {
+          setConfigured(false);
+          setError(CONFIG_HELP);
+        }
+      } finally {
+        if (!cancelled) setCheckingConfig(false);
+      }
+    })();
+
+    function onReady() {
+      if (isSupabaseConfigured()) {
+        setConfigured(true);
+        setCheckingConfig(false);
+        setError((current) => (current === CONFIG_HELP ? "" : current));
+      }
+    }
+    window.addEventListener("esp-supabase-ready", onReady);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("esp-supabase-ready", onReady);
+    };
+  }, [demo]);
 
   async function completeAdminGate(supabase: ReturnType<typeof createClient>) {
     const {
@@ -69,11 +127,20 @@ export function LoginForm() {
     setError("");
     setBusy(true);
     try {
-      if (!configured) {
-        setError(
-          "Supabase is not configured on this deployment. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel, then redeploy.",
-        );
-        return;
+      if (!demo && !isSupabaseConfigured()) {
+        const response = await fetch("/api/public-config", { cache: "no-store" });
+        const body = (await response.json()) as {
+          configured?: boolean;
+          url?: string;
+          key?: string;
+        };
+        if (body.configured && body.url && body.key) {
+          setRuntimeSupabaseConfig({ url: body.url, key: body.key });
+          setConfigured(true);
+        } else {
+          setError(CONFIG_HELP);
+          return;
+        }
       }
 
       const supabase = createClient();
@@ -142,7 +209,7 @@ export function LoginForm() {
     } catch (error) {
       const message = error instanceof Error ? error.message : "";
       if (/supabase is not configured/i.test(message)) {
-        setError(message);
+        setError(CONFIG_HELP);
       } else {
         setError(message || "Unable to sign in right now. Please try again.");
       }
@@ -157,6 +224,9 @@ export function LoginForm() {
       <CardBody>
         <form className="space-y-4" onSubmit={onSubmit}>
           {error ? <Alert tone="error">{error}</Alert> : null}
+          {checkingConfig ? (
+            <Alert tone="info">Checking database connection…</Alert>
+          ) : null}
           <div>
             <Label htmlFor="email" required>
               Email
@@ -183,8 +253,8 @@ export function LoginForm() {
               required
             />
           </div>
-          <Button type="submit" className="w-full" disabled={busy || !configured}>
-            {busy ? "Signing in…" : "Sign in"}
+          <Button type="submit" className="w-full" disabled={busy || checkingConfig || !configured}>
+            {busy ? "Signing in…" : checkingConfig ? "Connecting…" : "Sign in"}
           </Button>
           <p className="text-center text-sm text-muted">
             <Link href="/" className="text-accent hover:underline">

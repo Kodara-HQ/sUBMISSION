@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { QuestionField } from "@/components/employee/question-field";
 import { Alert } from "@/components/ui/alert";
@@ -10,6 +10,7 @@ import { FieldError, Input, Label, Select } from "@/components/ui/fields";
 import { Spinner } from "@/components/ui/spinner";
 import { STORAGE_BUCKET } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured, setRuntimeSupabaseConfig } from "@/lib/supabase/env";
 import type {
   Department,
   FormAnswerPayload,
@@ -32,6 +33,7 @@ import {
 } from "@/lib/validations";
 
 type AnswerValue = string | string[] | File | null;
+type BrowserClient = ReturnType<typeof createClient>;
 
 const defaultSettings: PublicSettings = {
   organization_name: "Bloj Company LTD",
@@ -45,23 +47,26 @@ function isSafetyTipType(type: SubmissionType | undefined) {
   return (type?.name || "").trim().toLowerCase() === "safety tip";
 }
 
-export function EmployeeForm() {
-  const supabase = useMemo(() => {
-    try {
-      return createClient();
-    } catch (error) {
-      console.error("Supabase client failed to initialize", error);
-      return null;
+async function resolveClient(): Promise<BrowserClient> {
+  if (!isSupabaseConfigured()) {
+    const response = await fetch("/api/public-config", { cache: "no-store" });
+    const body = (await response.json()) as {
+      configured?: boolean;
+      url?: string;
+      key?: string;
+    };
+    if (body.configured && body.url && body.key) {
+      setRuntimeSupabaseConfig({ url: body.url, key: body.key });
     }
-  }, []);
-  const submittedRef = useRef(false);
+  }
+  return createClient();
+}
 
-  const [loading, setLoading] = useState(() => Boolean(supabase));
-  const [loadError, setLoadError] = useState(() =>
-    supabase
-      ? ""
-      : "The submission form could not connect to the database. Check Supabase URL/anon key in Vercel (or .env.local) and redeploy.",
-  );
+export function EmployeeForm() {
+  const submittedRef = useRef(false);
+  const [supabase, setSupabase] = useState<BrowserClient | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [settings, setSettings] = useState<PublicSettings>(defaultSettings);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [types, setTypes] = useState<SubmissionType[]>([]);
@@ -85,13 +90,14 @@ export function EmployeeForm() {
   );
 
   useEffect(() => {
-    if (!supabase) return;
-
-    const client = supabase;
     let cancelled = false;
 
     async function load() {
       try {
+        const client = await resolveClient();
+        if (cancelled) return;
+        setSupabase(client);
+
         const [settingsRes, deptRes, typeRes, questionRes] = await Promise.all([
           client.rpc("get_public_settings"),
           client.from("departments").select("*").eq("is_active", true).order("name"),
@@ -133,18 +139,20 @@ export function EmployeeForm() {
         if (loadedTypes.length === 1) setSubmissionTypeId(loadedTypes[0].id);
       } catch {
         if (!cancelled) {
-          setLoadError("The submission form is temporarily unavailable. Please try again later.");
+          setLoadError(
+            "The submission form could not connect to the database. In Vercel add SUPABASE_URL and SUPABASE_ANON_KEY, redeploy without build cache, and confirm schema.sql was run.",
+          );
         }
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
 
-    load();
+    void load();
     return () => {
       cancelled = true;
     };
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
     if (!anonymous) return;
