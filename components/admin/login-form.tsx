@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Input, Label } from "@/components/ui/fields";
 import { isDemoMode } from "@/lib/demo/config";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/client";
 
 export function LoginForm() {
@@ -15,9 +16,16 @@ export function LoginForm() {
   const searchParams = useSearchParams();
   const nextPath = searchParams.get("next") || "/admin";
   const demo = isDemoMode();
+  const configured = demo || isSupabaseConfigured();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState(searchParams.get("error") === "auth" ? "Sign-in could not be completed." : "");
+  const [error, setError] = useState(
+    searchParams.get("error") === "auth"
+      ? "Sign-in could not be completed."
+      : !configured
+        ? "Supabase is not configured on this deployment. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel, then redeploy."
+        : "",
+  );
   const [busy, setBusy] = useState(false);
 
   async function completeAdminGate(supabase: ReturnType<typeof createClient>) {
@@ -37,10 +45,19 @@ export function LoginForm() {
         .maybeSingle();
 
       if (!existing) {
-        const bootstrap = await fetch("/api/admin/bootstrap", { method: "POST" });
+        let bootstrap: Response;
+        try {
+          bootstrap = await fetch("/api/admin/bootstrap", { method: "POST" });
+        } catch {
+          return "Could not reach the administrator bootstrap service. Check your connection and try again.";
+        }
         if (!bootstrap.ok) {
+          const body = (await bootstrap.json().catch(() => ({}))) as { message?: string };
           await supabase.auth.signOut();
-          return "This account is not authorized to access the administrator dashboard.";
+          return (
+            body.message ||
+            "This account is not authorized to access the administrator dashboard. Run supabase/bootstrap-admin.sql in Supabase, or sign in with ADMIN_BOOTSTRAP_EMAIL."
+          );
         }
       }
     }
@@ -52,6 +69,13 @@ export function LoginForm() {
     setError("");
     setBusy(true);
     try {
+      if (!configured) {
+        setError(
+          "Supabase is not configured on this deployment. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel, then redeploy.",
+        );
+        return;
+      }
+
       const supabase = createClient();
       const trimmedEmail = email.trim();
       let { error: signInError } = await supabase.auth.signInWithPassword({
@@ -60,15 +84,22 @@ export function LoginForm() {
       });
 
       if (signInError && !demo) {
-        const provision = await fetch("/api/admin/bootstrap-signup", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: trimmedEmail,
-            password,
-            full_name: "Emmanuel Lamadeku",
-          }),
-        });
+        let provision: Response;
+        try {
+          provision = await fetch("/api/admin/bootstrap-signup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: trimmedEmail,
+              password,
+              full_name: "Emmanuel Lamadeku",
+            }),
+          });
+        } catch {
+          setError("Could not reach the sign-in service. Check your connection and try again.");
+          return;
+        }
+
         const provisionBody = (await provision.json().catch(() => ({}))) as {
           ok?: boolean;
           message?: string;
@@ -89,7 +120,14 @@ export function LoginForm() {
       }
 
       if (signInError) {
-        setError("Invalid email or password.");
+        const message = signInError.message || "";
+        if (/confirm|verification|not confirmed/i.test(message)) {
+          setError(
+            "Email confirmation is required. In Supabase: Authentication → Providers → Email → turn off Confirm email, then try again.",
+          );
+        } else {
+          setError("Invalid email or password.");
+        }
         return;
       }
 
@@ -101,8 +139,13 @@ export function LoginForm() {
 
       router.replace(nextPath.startsWith("/admin") ? nextPath : "/admin");
       router.refresh();
-    } catch {
-      setError("Unable to sign in right now. Please try again.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      if (/supabase is not configured/i.test(message)) {
+        setError(message);
+      } else {
+        setError(message || "Unable to sign in right now. Please try again.");
+      }
     } finally {
       setBusy(false);
     }
@@ -140,7 +183,7 @@ export function LoginForm() {
               required
             />
           </div>
-          <Button type="submit" className="w-full" disabled={busy}>
+          <Button type="submit" className="w-full" disabled={busy || !configured}>
             {busy ? "Signing in…" : "Sign in"}
           </Button>
           <p className="text-center text-sm text-muted">

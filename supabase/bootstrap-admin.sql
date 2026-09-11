@@ -1,8 +1,8 @@
--- Create the first super administrator after the Auth user exists.
--- 1. Authentication > Users > Add user:
+-- Link or create the first super administrator after the Auth user exists.
+-- 1. Authentication > Users > Add user (or sign in once via the app bootstrap):
 --    Email: lamadekue@gmail.com
 --    Password: (the password you chose)
---    Optional user metadata: { "full_name": "Emmanuel Lamadeku" }
+--    Auto Confirm: enabled (or turn off Confirm email in Auth providers)
 -- 2. Run this in the SQL Editor.
 
 insert into public.admin_users (user_id, email, full_name, role, is_active)

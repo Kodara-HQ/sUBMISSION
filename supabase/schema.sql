@@ -314,9 +314,44 @@ set search_path = public
 as $$
 declare
   v_row public.admin_users;
+  v_email text;
+  v_name text;
 begin
   if auth.uid() is null then
     raise exception 'Not authenticated';
+  end if;
+
+  v_email := lower(coalesce(auth.jwt() ->> 'email', ''));
+  if v_email = '' then
+    raise exception 'Not authenticated';
+  end if;
+
+  v_name := coalesce(
+    nullif(auth.jwt() -> 'user_metadata' ->> 'full_name', ''),
+    nullif(auth.jwt() -> 'user_metadata' ->> 'name', ''),
+    split_part(v_email, '@', 1),
+    'Administrator'
+  );
+
+  select * into v_row
+  from public.admin_users
+  where user_id = auth.uid()
+    and is_active = true;
+  if v_row.id is not null then
+    return v_row;
+  end if;
+
+  update public.admin_users
+  set user_id = auth.uid(),
+      full_name = coalesce(nullif(full_name, ''), v_name),
+      is_active = true,
+      role = 'super_admin',
+      updated_at = now()
+  where lower(email) = v_email
+    and (user_id is null or user_id = auth.uid())
+  returning * into v_row;
+  if v_row.id is not null then
+    return v_row;
   end if;
 
   if exists (select 1 from public.admin_users) then
@@ -324,18 +359,7 @@ begin
   end if;
 
   insert into public.admin_users (user_id, email, full_name, role, is_active)
-  values (
-    auth.uid(),
-    coalesce(auth.jwt() ->> 'email', ''),
-    coalesce(
-      nullif(auth.jwt() -> 'user_metadata' ->> 'full_name', ''),
-      nullif(auth.jwt() -> 'user_metadata' ->> 'name', ''),
-      split_part(coalesce(auth.jwt() ->> 'email', 'Administrator'), '@', 1),
-      'Administrator'
-    ),
-    'super_admin',
-    true
-  )
+  values (auth.uid(), v_email, v_name, 'super_admin', true)
   returning * into v_row;
 
   return v_row;
