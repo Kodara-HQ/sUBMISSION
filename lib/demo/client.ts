@@ -7,7 +7,7 @@ import {
   hasDemoSessionCookie,
   setDemoSessionCookie,
 } from "@/lib/demo/config";
-import { createSeedDb, loadDemoDb, nowIso, saveDemoDb, type DemoDB, type DemoRow } from "@/lib/demo/store";
+import { createSeedDb, nowIso, pullDemoDb, pushDemoDb, type DemoDB, type DemoRow } from "@/lib/demo/store";
 
 type Filter =
   | { kind: "eq"; field: string; value: unknown }
@@ -245,10 +245,11 @@ class Query {
     resolve?: ((value: { data: unknown; error: { message: string; code?: string } | null; count: number | null }) => TResult1 | PromiseLike<TResult1>) | null,
     reject?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
   ) {
-    return Promise.resolve(this.execute()).then(resolve ?? undefined, reject ?? undefined);
+    return this.execute().then(resolve ?? undefined, reject ?? undefined);
   }
 
-  private execute() {
+  private async execute() {
+    if (this.persist) await pullDemoDb(this.db);
     const rows = getTable(this.db, this.table);
     if (this.action === "select") {
       let result = applyOrder(applyFilters(rows, this.filters), this.orders);
@@ -273,7 +274,7 @@ class Query {
         ...row,
       }));
       setTable(this.db, this.table, [...rows, ...created]);
-      if (this.persist) saveDemoDb(this.db);
+      if (this.persist) await pushDemoDb(this.db);
       if (this.wantSingle || this.wantMaybe) {
         return ok(pickColumns(created[0], this.selectSpec, this.db));
       }
@@ -286,7 +287,7 @@ class Query {
         applyFilters([row], this.filters).length ? { ...row, ...patch } : row,
       );
       setTable(this.db, this.table, next);
-      if (this.persist) saveDemoDb(this.db);
+      if (this.persist) await pushDemoDb(this.db);
       return ok(null);
     }
 
@@ -302,7 +303,7 @@ class Query {
       this.db.admin_notes = this.db.admin_notes.filter((row) => !removed.has(row.submission_id));
     }
     setTable(this.db, this.table, remaining);
-    if (this.persist) saveDemoDb(this.db);
+    if (this.persist) await pushDemoDb(this.db);
     return ok(null);
   }
 }
@@ -400,7 +401,7 @@ async function rpc(name: string, args: Record<string, unknown>, db: DemoDB, pers
         updated_at: created,
       });
     }
-    if (persist) saveDemoDb(db);
+    if (persist) await pushDemoDb(db);
     return ok(id);
   }
   if (name === "attach_submission_files") {
@@ -417,7 +418,7 @@ async function rpc(name: string, args: Record<string, unknown>, db: DemoDB, pers
         created_at: nowIso(),
       });
     }
-    if (persist) saveDemoDb(db);
+    if (persist) await pushDemoDb(db);
     return ok(null);
   }
   return fail("Unknown procedure");
@@ -425,14 +426,17 @@ async function rpc(name: string, args: Record<string, unknown>, db: DemoDB, pers
 
 export function createDemoClient(options?: { cookieHeader?: string; persist?: boolean }) {
   const persist = options?.persist ?? typeof window !== "undefined";
-  const db = persist ? loadDemoDb() : createSeedDb();
+  const db = createSeedDb();
   const cookieHeader = options?.cookieHeader;
+  const ready = persist ? pullDemoDb(db) : Promise.resolve(db);
 
   return {
     from(table: string) {
       return new Query(table, db, persist);
     },
-    rpc(name: string, args: Record<string, unknown> = {}) {
+    async rpc(name: string, args: Record<string, unknown> = {}) {
+      await ready;
+      if (persist) await pullDemoDb(db);
       return rpc(name, args, db, persist);
     },
     auth: {
@@ -462,6 +466,8 @@ export function createDemoClient(options?: { cookieHeader?: string; persist?: bo
       from() {
         return {
           async upload(path: string, file: File) {
+            await ready;
+            if (persist) await pullDemoDb(db);
             const dataUrl = await new Promise<string>((resolve, reject) => {
               const reader = new FileReader();
               reader.onload = () => resolve(String(reader.result));
@@ -469,17 +475,21 @@ export function createDemoClient(options?: { cookieHeader?: string; persist?: bo
               reader.readAsDataURL(file);
             });
             db.files[path] = { name: file.name, mime: file.type, dataUrl };
-            if (persist) saveDemoDb(db);
+            if (persist) await pushDemoDb(db);
             return ok({ path });
           },
           async createSignedUrl(path: string) {
+            await ready;
+            if (persist) await pullDemoDb(db);
             const file = db.files[path];
             if (!file) return fail("File not found.");
             return ok({ signedUrl: file.dataUrl });
           },
           async remove(paths: string[]) {
+            await ready;
+            if (persist) await pullDemoDb(db);
             for (const path of paths) delete db.files[path];
-            if (persist) saveDemoDb(db);
+            if (persist) await pushDemoDb(db);
             return ok(null);
           },
         };

@@ -282,6 +282,9 @@ export function EmployeeForm() {
           <p className="mx-auto mt-3 max-w-lg text-muted">
             Your submission has been received successfully. Thank you.
           </p>
+          <p className="mx-auto mt-2 max-w-lg text-sm text-muted">
+            Administrators can open it in the dashboard under Submissions.
+          </p>
           <p className="mt-4 text-sm text-muted">
             Reference number: <span className="font-medium text-navy">{shortId(successId)}</span>
           </p>

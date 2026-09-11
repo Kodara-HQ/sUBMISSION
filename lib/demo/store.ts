@@ -180,11 +180,11 @@ export function createSeedDb(): DemoDB {
   };
 }
 
-function clone<T>(value: T): T {
+export function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
-function ensureCatalog(db: DemoDB): DemoDB {
+export function ensureCatalog(db: DemoDB): DemoDB {
   const seed = createSeedDb();
   for (const type of seed.submission_types) {
     const existing = db.submission_types.find((row) => row.id === type.id || row.name === type.name);
@@ -222,26 +222,103 @@ function ensureCatalog(db: DemoDB): DemoDB {
   return db;
 }
 
-export function loadDemoDb(): DemoDB {
-  if (typeof window === "undefined") return createSeedDb();
+/** Pull the shared demo DB used by every browser on this machine/server. */
+export async function pullDemoDb(target?: DemoDB): Promise<DemoDB> {
+  if (typeof window === "undefined") {
+    const seed = createSeedDb();
+    if (target) replaceDb(target, seed);
+    return target ?? seed;
+  }
+
+  const localCopy = readLegacyLocalCopy();
+
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      const seed = createSeedDb();
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
-      return seed;
+    const response = await fetch("/api/demo/db", { cache: "no-store" });
+    if (!response.ok) throw new Error("demo-db");
+    let remote = ensureCatalog((await response.json()) as DemoDB);
+    if (
+      localCopy &&
+      remote.submissions.length === 0 &&
+      localCopy.submissions.length > 0
+    ) {
+      remote = ensureCatalog(localCopy);
+      await pushDemoDb(remote);
+      clearLegacyLocalCopy();
     }
-    const db = ensureCatalog(JSON.parse(raw) as DemoDB);
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(clone(db)));
-    return db;
+    if (target) {
+      replaceDb(target, remote);
+      return target;
+    }
+    return remote;
   } catch {
-    return createSeedDb();
+    if (localCopy) {
+      await pushDemoDb(localCopy).catch(() => undefined);
+      clearLegacyLocalCopy();
+      if (target) {
+        replaceDb(target, localCopy);
+        return target;
+      }
+      return localCopy;
+    }
+    const seed = createSeedDb();
+    if (target) replaceDb(target, seed);
+    return target ?? seed;
   }
 }
 
-export function saveDemoDb(db: DemoDB) {
+function readLegacyLocalCopy(): DemoDB | null {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return ensureCatalog(JSON.parse(raw) as DemoDB);
+  } catch {
+    return null;
+  }
+}
+
+function clearLegacyLocalCopy() {
+  try {
+    window.localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+export async function pushDemoDb(db: DemoDB): Promise<void> {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(clone(db)));
+  const payload = ensureCatalog(clone(db));
+  await fetch("/api/demo/db", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  clearLegacyLocalCopy();
+}
+
+function replaceDb(target: DemoDB, source: DemoDB) {
+  const next = ensureCatalog(clone(source));
+  target.departments = next.departments;
+  target.submission_types = next.submission_types;
+  target.employees = next.employees;
+  target.admin_users = next.admin_users;
+  target.questions = next.questions;
+  target.question_options = next.question_options;
+  target.app_settings = next.app_settings;
+  target.submissions = next.submissions;
+  target.submission_answers = next.submission_answers;
+  target.submission_files = next.submission_files;
+  target.admin_notes = next.admin_notes;
+  target.files = next.files;
+}
+
+/** @deprecated Prefer pullDemoDb — kept for sync bootstrap only. */
+export function loadDemoDb(): DemoDB {
+  return createSeedDb();
+}
+
+/** @deprecated Prefer pushDemoDb */
+export function saveDemoDb(_db: DemoDB) {
+  // no-op: shared persistence is async via pushDemoDb
 }
 
 export function nowIso() {

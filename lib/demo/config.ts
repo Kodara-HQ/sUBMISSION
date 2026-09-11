@@ -16,6 +16,8 @@ export const DEMO_USER_ID = "00000000-0000-4000-8000-000000000001";
 export const DEMO_ADMIN_ID = "00000000-0000-4000-8000-000000000002";
 
 export function isDemoMode() {
+  // Never use demo storage on Vercel — submissions must go to shared Supabase.
+  if (process.env.VERCEL === "1" || process.env.NEXT_PUBLIC_VERCEL_ENV) return false;
   // Demo is opt-in only. Auto-fallback caused per-browser data that never reached a shared system.
   if (process.env.NEXT_PUBLIC_DEMO_MODE !== "true") return false;
   const { url, key } = getSupabasePublicConfig();

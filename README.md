@@ -107,9 +107,9 @@ Share `/employee-submit` with employees. Do not share `/admin`.
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY` (JWT anon key preferred)
    - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (optional fallback)
    - `ADMIN_BOOTSTRAP_EMAIL`
-   - Do **not** set `NEXT_PUBLIC_DEMO_MODE=true` on Vercel. Demo mode stores submissions in each browser only, so other devices will not see them.
+   - Do **not** set `NEXT_PUBLIC_DEMO_MODE=true` on Vercel. Production always uses Supabase so every browser shares one database.
 4. **Settings → Deployment Protection** → set to **None** (turn off Vercel Authentication).  
-   Otherwise phones and other devices will be forced to log in to Vercel before seeing the app.
+   Otherwise phones and other browsers get a Vercel login page and never reach your form — submissions will look like they “don’t go to the system.”
 5. Deploy / Redeploy after changing env vars or protection.
 6. In Supabase **Auth → URL configuration**:
    - Site URL = your Vercel production URL
