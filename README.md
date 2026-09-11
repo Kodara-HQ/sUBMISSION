@@ -60,7 +60,7 @@ ADMIN_BOOTSTRAP_EMAIL=admin@your-organization.com
 1. Create a Supabase project.
 2. Open **SQL Editor** and run `supabase/schema.sql`.
 3. Run `supabase/seed.sql` (optional but recommended).
-4. **Authentication → Providers → Email**: enable Email. Turn **off** public sign-ups so only invited/created users can become administrators.
+4. **Authentication → Providers → Email**: enable Email. For first admin setup, turn **Confirm email** off (or create the user with Auto Confirm). Public sign-ups can stay off after the admin exists.
 5. **Authentication → URL configuration**:
    - Site URL: `http://localhost:3000` locally, then your Vercel URL in production
    - Redirect URLs: `http://localhost:3000/auth/callback` and `https://YOUR_DOMAIN/auth/callback`
