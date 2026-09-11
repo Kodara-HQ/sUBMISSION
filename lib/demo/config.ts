@@ -8,7 +8,8 @@ export const DEMO_EMAIL = (
 )
   .trim()
   .toLowerCase();
-export const DEMO_PASSWORD = process.env.NEXT_PUBLIC_DEMO_PASSWORD || "";
+// Public demo credential used only when Supabase env vars are missing.
+export const DEMO_PASSWORD = process.env.NEXT_PUBLIC_DEMO_PASSWORD || "BLOJRP922";
 export const DEMO_FULL_NAME =
   process.env.NEXT_PUBLIC_DEMO_FULL_NAME?.trim() || "Emmanuel Lamadeku";
 export const DEMO_USER_ID = "00000000-0000-4000-8000-000000000001";

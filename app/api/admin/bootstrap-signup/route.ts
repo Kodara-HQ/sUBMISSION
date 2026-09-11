@@ -11,10 +11,7 @@ type Body = {
 
 export async function POST(request: Request) {
   if (isDemoMode()) {
-    return NextResponse.json(
-      { ok: false, message: "Demo mode does not need account provisioning." },
-      { status: 400 },
-    );
+    return NextResponse.json({ ok: false, message: "Invalid email or password." }, { status: 400 });
   }
 
   const expected = process.env.ADMIN_BOOTSTRAP_EMAIL?.trim().toLowerCase();

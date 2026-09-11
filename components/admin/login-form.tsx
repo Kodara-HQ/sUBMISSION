@@ -7,12 +7,14 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Input, Label } from "@/components/ui/fields";
+import { isDemoMode } from "@/lib/demo/config";
 import { createClient } from "@/lib/supabase/client";
 
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = searchParams.get("next") || "/admin";
+  const demo = isDemoMode();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(searchParams.get("error") === "auth" ? "Sign-in could not be completed." : "");
@@ -57,7 +59,7 @@ export function LoginForm() {
         password,
       });
 
-      if (signInError) {
+      if (signInError && !demo) {
         const provision = await fetch("/api/admin/bootstrap-signup", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
