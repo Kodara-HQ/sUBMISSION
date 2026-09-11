@@ -1,3 +1,5 @@
+import { getSupabasePublicConfig } from "@/lib/supabase/env";
+
 export const DEMO_COOKIE = "esp_demo_session";
 export const DEMO_EMAIL = "admin@portal.local";
 export const DEMO_PASSWORD = "Admin123!";
@@ -5,9 +7,10 @@ export const DEMO_USER_ID = "00000000-0000-4000-8000-000000000001";
 export const DEMO_ADMIN_ID = "00000000-0000-4000-8000-000000000002";
 
 export function isDemoMode() {
-  if (process.env.NEXT_PUBLIC_DEMO_MODE !== "true") return false;
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-  return !url || url.includes("YOUR_PROJECT");
+  const { url, key } = getSupabasePublicConfig();
+  // If production env vars are missing, keep the form usable with local demo data.
+  if (!url || !key || url.includes("YOUR_PROJECT")) return true;
+  return process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 }
 
 export function demoUser() {

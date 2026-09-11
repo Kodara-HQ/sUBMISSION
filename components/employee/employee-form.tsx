@@ -49,7 +49,8 @@ export function EmployeeForm() {
   const supabase = useMemo(() => {
     try {
       return createClient();
-    } catch {
+    } catch (error) {
+      console.error("Supabase client failed to initialize", error);
       return null;
     }
   }, []);
@@ -57,7 +58,9 @@ export function EmployeeForm() {
 
   const [loading, setLoading] = useState(() => Boolean(supabase));
   const [loadError, setLoadError] = useState(() =>
-    supabase ? "" : "The submission form is not configured yet. Please contact your administrator.",
+    supabase
+      ? ""
+      : "The submission form could not connect to the database. Check Supabase URL/anon key in Vercel (or .env.local) and redeploy.",
   );
   const [settings, setSettings] = useState<PublicSettings>(defaultSettings);
   const [departments, setDepartments] = useState<Department[]>([]);
