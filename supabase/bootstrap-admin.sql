@@ -1,18 +1,22 @@
 -- Create the first super administrator after the Auth user exists.
--- 1. Authentication > Users > Add user (email/password)
--- 2. Replace the email below and run this in the SQL Editor.
+-- 1. Authentication > Users > Add user:
+--    Email: lamadekue@gmail.com
+--    Password: (the password you chose)
+--    Optional user metadata: { "full_name": "Emmanuel Lamadeku" }
+-- 2. Run this in the SQL Editor.
 
 insert into public.admin_users (user_id, email, full_name, role, is_active)
 select
   id,
   email,
-  coalesce(raw_user_meta_data->>'full_name', split_part(email, '@', 1), 'Administrator'),
+  'Emmanuel Lamadeku',
   'super_admin',
   true
 from auth.users
-where lower(email) = lower('admin@your-organization.com')
+where lower(email) = lower('lamadekue@gmail.com')
 on conflict (email) do update
   set user_id = excluded.user_id,
+      full_name = excluded.full_name,
       is_active = true,
       role = 'super_admin',
       updated_at = now();

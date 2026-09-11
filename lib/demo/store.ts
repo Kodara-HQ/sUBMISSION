@@ -17,7 +17,7 @@ export type DemoDB = {
   files: Record<string, { name: string; mime: string; dataUrl: string }>;
 };
 
-const STORAGE_KEY = "esp_demo_db_v6";
+const STORAGE_KEY = "esp_demo_db_v7";
 
 const D = {
   it: "11111111-1111-4111-8111-111111111111",
@@ -42,26 +42,10 @@ const Q = {
   safetyTip: "88888888-8888-4888-8888-888888888886",
 };
 
-const E = {
-  alex: "99999999-9999-4999-8999-999999999991",
-  jordan: "99999999-9999-4999-8999-999999999992",
-  sam: "99999999-9999-4999-8999-999999999993",
-};
-
-const S = {
-  one: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1",
-  two: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2",
-  three: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3",
-};
-
 function isoDaysAgo(days: number) {
   const date = new Date();
   date.setDate(date.getDate() - days);
   return date.toISOString();
-}
-
-function dateDaysAgo(days: number) {
-  return isoDaysAgo(days).slice(0, 10);
 }
 
 export function createSeedDb(): DemoDB {
@@ -93,17 +77,13 @@ export function createSeedDb(): DemoDB {
         updated_at: isoDaysAgo(40),
       },
     ],
-    employees: [
-      { id: E.alex, full_name: "Alex Rivera", employee_id: "EMP-1001", email: "alex.rivera@example.com", department_id: D.production, is_active: true, created_at: isoDaysAgo(30), updated_at: isoDaysAgo(30) },
-      { id: E.jordan, full_name: "Jordan Lee", employee_id: "EMP-1002", email: "jordan.lee@example.com", department_id: D.hr, is_active: true, created_at: isoDaysAgo(30), updated_at: isoDaysAgo(30) },
-      { id: E.sam, full_name: "Sam Patel", employee_id: "EMP-1003", email: "sam.patel@example.com", department_id: D.finance, is_active: true, created_at: isoDaysAgo(30), updated_at: isoDaysAgo(30) },
-    ],
+    employees: [],
     admin_users: [
       {
         id: DEMO_ADMIN_ID,
         user_id: DEMO_USER_ID,
-        email: "admin@portal.local",
-        full_name: "Portal Administrator",
+        email: "lamadekue@gmail.com",
+        full_name: "Emmanuel Lamadeku",
         role: "super_admin",
         is_active: true,
         created_at: isoDaysAgo(40),
@@ -186,81 +166,16 @@ export function createSeedDb(): DemoDB {
         max_file_size_mb: 10,
         require_known_employee: false,
         prevent_duplicate_same_day: true,
-        notification_email: "admin@portal.local",
+        notification_email: "lamadekue@gmail.com",
         notification_webhook_url: null,
         created_at: isoDaysAgo(40),
         updated_at: isoDaysAgo(40),
       },
     ],
-    submissions: [
-      {
-        id: S.one,
-        employee_id: E.alex,
-        employee_full_name: "Alex Rivera",
-        employee_identifier: "Production Supervisor",
-        department_id: D.production,
-        department_name: "Production",
-        submission_type_id: T.spotlight,
-        submission_type_name: "Employee Spotlight",
-        submission_date: dateDaysAgo(2),
-        status: "pending",
-        created_at: isoDaysAgo(2),
-        updated_at: isoDaysAgo(2),
-      },
-      {
-        id: S.two,
-        employee_id: E.jordan,
-        employee_full_name: "Jordan Lee",
-        employee_identifier: "HR Officer",
-        department_id: D.hr,
-        department_name: "HR",
-        submission_type_id: T.spotlight,
-        submission_type_name: "Employee Spotlight",
-        submission_date: dateDaysAgo(6),
-        status: "reviewed",
-        created_at: isoDaysAgo(6),
-        updated_at: isoDaysAgo(5),
-      },
-      {
-        id: S.three,
-        employee_id: E.sam,
-        employee_full_name: "Sam Patel",
-        employee_identifier: "Accountant",
-        department_id: D.finance,
-        department_name: "Finance",
-        submission_type_id: T.spotlight,
-        submission_type_name: "Employee Spotlight",
-        submission_date: dateDaysAgo(12),
-        status: "pending",
-        created_at: isoDaysAgo(12),
-        updated_at: isoDaysAgo(12),
-      },
-    ],
-    submission_answers: [
-      { id: "cccccccc-cccc-4ccc-8ccc-ccccccccccc1", submission_id: S.one, question_id: Q.inspired, question_label: "What inspired you to pursue a career in mining?", field_type: "long_text", answer_text: "I grew up near a mining community and was inspired by the skill and teamwork I saw on site.", answer_json: null, created_at: isoDaysAgo(2), updated_at: isoDaysAgo(2) },
-      { id: "cccccccc-cccc-4ccc-8ccc-ccccccccccc2", submission_id: S.one, question_id: Q.lesson, question_label: "What has been your biggest lesson or experience since joining the industry?", field_type: "long_text", answer_text: "Safety is not a slogan. Every decision has to protect the people working beside you.", answer_json: null, created_at: isoDaysAgo(2), updated_at: isoDaysAgo(2) },
-      { id: "cccccccc-cccc-4ccc-8ccc-ccccccccccc3", submission_id: S.one, question_id: Q.fiveYears, question_label: "Where do you see yourself professionally in the next five years?", field_type: "long_text", answer_text: "I want to grow into a supervisory role in production and help train new operators.", answer_json: null, created_at: isoDaysAgo(2), updated_at: isoDaysAgo(2) },
-      { id: "cccccccc-cccc-4ccc-8ccc-ccccccccccc4", submission_id: S.one, question_id: Q.message, question_label: "What message would you share with young people who aspire to build a career in the mining industry?", field_type: "long_text", answer_text: "Be curious, respect the process, and never stop learning from people with more experience.", answer_json: null, created_at: isoDaysAgo(2), updated_at: isoDaysAgo(2) },
-      { id: "cccccccc-cccc-4ccc-8ccc-ccccccccccc5", submission_id: S.two, question_id: Q.inspired, question_label: "What inspired you to pursue a career in mining?", field_type: "long_text", answer_text: "I wanted a career where people development makes a real difference to operations.", answer_json: null, created_at: isoDaysAgo(6), updated_at: isoDaysAgo(6) },
-      { id: "cccccccc-cccc-4ccc-8ccc-ccccccccccc6", submission_id: S.two, question_id: Q.lesson, question_label: "What has been your biggest lesson or experience since joining the industry?", field_type: "long_text", answer_text: "Listening first has been the most valuable skill in HR on a mine site.", answer_json: null, created_at: isoDaysAgo(6), updated_at: isoDaysAgo(6) },
-      { id: "cccccccc-cccc-4ccc-8ccc-ccccccccccc7", submission_id: S.two, question_id: Q.fiveYears, question_label: "Where do you see yourself professionally in the next five years?", field_type: "long_text", answer_text: "Leading people programmes that support both safety and career growth.", answer_json: null, created_at: isoDaysAgo(6), updated_at: isoDaysAgo(6) },
-      { id: "cccccccc-cccc-4ccc-8ccc-ccccccccccc8", submission_id: S.two, question_id: Q.message, question_label: "What message would you share with young people who aspire to build a career in the mining industry?", field_type: "long_text", answer_text: "There is space for many professions in mining, not only technical roles. Bring your strengths.", answer_json: null, created_at: isoDaysAgo(6), updated_at: isoDaysAgo(6) },
-      { id: "cccccccc-cccc-4ccc-8ccc-ccccccccccc9", submission_id: S.three, question_id: Q.inspired, question_label: "What inspired you to pursue a career in mining?", field_type: "long_text", answer_text: "The scale of mining finance and the chance to support a large operation drew me in.", answer_json: null, created_at: isoDaysAgo(12), updated_at: isoDaysAgo(12) },
-      { id: "cccccccc-cccc-4ccc-8ccc-cccccccccc10", submission_id: S.three, question_id: Q.lesson, question_label: "What has been your biggest lesson or experience since joining the industry?", field_type: "long_text", answer_text: "Accuracy and deadlines matter because the whole site depends on them.", answer_json: null, created_at: isoDaysAgo(12), updated_at: isoDaysAgo(12) },
-      { id: "cccccccc-cccc-4ccc-8ccc-cccccccccc11", submission_id: S.three, question_id: Q.fiveYears, question_label: "Where do you see yourself professionally in the next five years?", field_type: "long_text", answer_text: "I hope to lead a finance workstream and mentor junior accountants.", answer_json: null, created_at: isoDaysAgo(12), updated_at: isoDaysAgo(12) },
-      { id: "cccccccc-cccc-4ccc-8ccc-cccccccccc12", submission_id: S.three, question_id: Q.message, question_label: "What message would you share with young people who aspire to build a career in the mining industry?", field_type: "long_text", answer_text: "Build strong fundamentals, stay ethical, and ask questions until you understand the operation.", answer_json: null, created_at: isoDaysAgo(12), updated_at: isoDaysAgo(12) },
-    ],
+    submissions: [],
+    submission_answers: [],
     submission_files: [],
-    admin_notes: [
-      {
-        id: "dddddddd-dddd-4ddd-8ddd-ddddddddddd1",
-        submission_id: S.two,
-        admin_user_id: DEMO_ADMIN_ID,
-        note: "Approved for the next Employee Spotlight feature.",
-        created_at: isoDaysAgo(5),
-        updated_at: isoDaysAgo(5),
-      },
-    ],
+    admin_notes: [],
     files: {},
   };
 }
@@ -293,6 +208,16 @@ function ensureCatalog(db: DemoDB): DemoDB {
       existing.is_required = question.is_required;
       existing.sort_order = question.sort_order;
     }
+  }
+  const admin = seed.admin_users[0];
+  if (admin) {
+    db.admin_users = [clone(admin)];
+  }
+  if (seed.app_settings[0]) {
+    const settings = db.app_settings[0] || clone(seed.app_settings[0]);
+    settings.organization_name = seed.app_settings[0].organization_name;
+    settings.notification_email = seed.app_settings[0].notification_email;
+    db.app_settings = [settings];
   }
   return db;
 }

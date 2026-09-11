@@ -80,23 +80,6 @@ where t.name = 'Safety Tip'
   and q.label = 'What is your safety tip?';
 
 update public.app_settings
-set organization_name = 'Bloj Company LTD'
+set organization_name = 'Bloj Company LTD',
+    notification_email = 'lamadekue@gmail.com'
 where id = 1;
-
-insert into public.employees (full_name, employee_id, email, department_id, is_active)
-select 'Alex Rivera', 'EMP-1001', 'alex.rivera@example.com', d.id, true
-from public.departments d
-where d.name = 'Production'
-  and not exists (select 1 from public.employees e where lower(e.employee_id) = 'emp-1001');
-
-insert into public.employees (full_name, employee_id, email, department_id, is_active)
-select 'Jordan Lee', 'EMP-1002', 'jordan.lee@example.com', d.id, true
-from public.departments d
-where d.name = 'HR'
-  and not exists (select 1 from public.employees e where lower(e.employee_id) = 'emp-1002');
-
-insert into public.employees (full_name, employee_id, email, department_id, is_active)
-select 'Sam Patel', 'EMP-1003', 'sam.patel@example.com', d.id, true
-from public.departments d
-where d.name = 'Finance'
-  and not exists (select 1 from public.employees e where lower(e.employee_id) = 'emp-1003');

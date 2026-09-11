@@ -437,7 +437,7 @@ export function createDemoClient(options?: { cookieHeader?: string; persist?: bo
     },
     auth: {
       async signInWithPassword({ email, password }: { email: string; password: string }) {
-        if (email.trim().toLowerCase() !== DEMO_EMAIL || password !== DEMO_PASSWORD) {
+        if (!DEMO_PASSWORD || email.trim().toLowerCase() !== DEMO_EMAIL || password !== DEMO_PASSWORD) {
           return fail("Invalid email or password.");
         }
         if (typeof document !== "undefined") setDemoSessionCookie();

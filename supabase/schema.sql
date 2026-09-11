@@ -327,7 +327,12 @@ begin
   values (
     auth.uid(),
     coalesce(auth.jwt() ->> 'email', ''),
-    coalesce(auth.jwt() ->> 'email', 'Administrator'),
+    coalesce(
+      nullif(auth.jwt() -> 'user_metadata' ->> 'full_name', ''),
+      nullif(auth.jwt() -> 'user_metadata' ->> 'name', ''),
+      split_part(coalesce(auth.jwt() ->> 'email', 'Administrator'), '@', 1),
+      'Administrator'
+    ),
     'super_admin',
     true
   )

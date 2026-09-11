@@ -7,17 +7,14 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Input, Label } from "@/components/ui/fields";
-import { DEMO_EMAIL, DEMO_PASSWORD, isDemoMode } from "@/lib/demo/config";
 import { createClient } from "@/lib/supabase/client";
-
-const demo = isDemoMode();
 
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = searchParams.get("next") || "/admin";
-  const [email, setEmail] = useState(demo ? DEMO_EMAIL : "");
-  const [password, setPassword] = useState(demo ? DEMO_PASSWORD : "");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState(searchParams.get("error") === "auth" ? "Sign-in could not be completed." : "");
   const [busy, setBusy] = useState(false);
 
@@ -75,13 +72,6 @@ export function LoginForm() {
       <CardHeader title="Administrator sign in" description="Use your authorized administrator credentials." />
       <CardBody>
         <form className="space-y-4" onSubmit={onSubmit}>
-          {demo ? (
-            <Alert tone="info" title="Local demo login">
-              Email: {DEMO_EMAIL}
-              <br />
-              Password: {DEMO_PASSWORD}
-            </Alert>
-          ) : null}
           {error ? <Alert tone="error">{error}</Alert> : null}
           <div>
             <Label htmlFor="email" required>
