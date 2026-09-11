@@ -23,7 +23,8 @@ import type {
   SubmissionStatus,
   SubmissionType,
 } from "@/lib/types";
-import { formatDate, publicErrorMessage, useDebouncedValue } from "@/lib/utils";
+import { formatDate, publicErrorMessage } from "@/lib/utils";
+import { useDebouncedValue } from "@/lib/hooks";
 
 function sanitizeSearch(value: string) {
   return value.replace(/[%(),]/g, " ").replace(/\s+/g, " ").trim();

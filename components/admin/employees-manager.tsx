@@ -14,7 +14,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast";
 import { createClient } from "@/lib/supabase/client";
 import type { Department, Employee } from "@/lib/types";
-import { formatDate, publicErrorMessage, useDebouncedValue } from "@/lib/utils";
+import { formatDate, publicErrorMessage } from "@/lib/utils";
+import { useDebouncedValue } from "@/lib/hooks";
 import { isEmail } from "@/lib/validations";
 
 type FormState = {

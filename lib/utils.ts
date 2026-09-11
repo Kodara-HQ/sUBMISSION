@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import type { FieldType } from "@/lib/types";
 
 export function cn(...classes: Array<string | false | null | undefined>) {
@@ -94,15 +93,6 @@ export function fieldTypeLabel(type: FieldType) {
 
 export function needsOptions(type: FieldType) {
   return type === "multiple_choice" || type === "checkboxes" || type === "dropdown";
-}
-
-export function useDebouncedValue<T>(value: T, delay = 300) {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(timer);
-  }, [value, delay]);
-  return debounced;
 }
 
 export function downloadTextFile(filename: string, contents: string, mime: string) {
