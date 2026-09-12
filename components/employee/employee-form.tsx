@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useSearchParams } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
 import { QuestionField } from "@/components/employee/question-field";
 import { Alert } from "@/components/ui/alert";
@@ -47,6 +48,22 @@ function isSafetyTipType(type: SubmissionType | undefined) {
   return (type?.name || "").trim().toLowerCase() === "safety tip";
 }
 
+function isSpotlightType(type: SubmissionType | undefined) {
+  return (type?.name || "").trim().toLowerCase() === "employee spotlight";
+}
+
+function matchRequestedType(types: SubmissionType[], requested: string) {
+  const key = requested.trim().toLowerCase();
+  if (!key) return undefined;
+  if (key === "safety" || key === "safety-tip" || key === "safety_tip" || key === "tip") {
+    return types.find(isSafetyTipType);
+  }
+  if (key === "spotlight" || key === "employee-spotlight" || key === "employee_spotlight") {
+    return types.find(isSpotlightType);
+  }
+  return types.find((type) => type.name.trim().toLowerCase() === key);
+}
+
 async function resolveClient(): Promise<BrowserClient> {
   if (!isSupabaseConfigured()) {
     const response = await fetch("/api/public-config", { cache: "no-store" });
@@ -63,6 +80,10 @@ async function resolveClient(): Promise<BrowserClient> {
 }
 
 export function EmployeeForm() {
+  const searchParams = useSearchParams();
+  const requestedType = (searchParams.get("type") || "").trim();
+  const typeLocked = Boolean(requestedType);
+
   const submittedRef = useRef(false);
   const [supabase, setSupabase] = useState<BrowserClient | null>(null);
   const [loading, setLoading] = useState(true);
@@ -136,7 +157,14 @@ export function EmployeeForm() {
           }
           return next;
         });
-        if (loadedTypes.length === 1) setSubmissionTypeId(loadedTypes[0].id);
+        const matched = matchRequestedType(loadedTypes, requestedType);
+        if (matched) {
+          setSubmissionTypeId(matched.id);
+        } else if (loadedTypes.length === 1) {
+          setSubmissionTypeId(loadedTypes[0].id);
+        } else if (requestedType) {
+          setFormError("That submission type is not available. Choose one below.");
+        }
       } catch {
         if (!cancelled) {
           setLoadError(
@@ -152,7 +180,7 @@ export function EmployeeForm() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [requestedType]);
 
   useEffect(() => {
     if (!anonymous) return;
@@ -306,46 +334,61 @@ export function EmployeeForm() {
     <form onSubmit={onSubmit} noValidate className="space-y-6">
       {formError ? <Alert tone="error">{formError}</Alert> : null}
 
-      <Card>
-        <CardHeader
-          title="What are you submitting?"
-          description="Your choice controls the questions and whether your name is collected."
-        />
-        <CardBody className="space-y-3">
-          <div className="grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Submission type">
-            {types.map((type) => {
-              const selected = submissionTypeId === type.id;
-              const tip = isSafetyTipType(type);
-              return (
-                <button
-                  key={type.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  onClick={() => {
-                    setSubmissionTypeId(type.id);
-                    setErrors({});
-                    setFormError("");
-                  }}
-                  className={
-                    selected
-                      ? "rounded-xl border-2 border-accent bg-accent-soft/40 p-4 text-left shadow-sm"
-                      : "rounded-xl border border-border bg-white p-4 text-left hover:border-accent/50"
-                  }
-                >
-                  <p className="font-semibold text-navy">{type.name}</p>
-                  <p className="mt-1 text-sm text-muted">
-                    {tip
-                      ? "One anonymous tip. No name required."
-                      : "Spotlight questionnaire with your name and role."}
-                  </p>
-                </button>
-              );
-            })}
-          </div>
-          <FieldError message={errors.submissionTypeId} />
-        </CardBody>
-      </Card>
+      {typeLocked && selectedType ? (
+        <Card>
+          <CardBody className="py-4">
+            <p className="text-sm font-medium text-accent">
+              {anonymous ? "Safety Tip" : "Employee Spotlight"}
+            </p>
+            <p className="mt-1 text-sm text-muted">
+              {anonymous
+                ? "Anonymous tip — your name is not collected."
+                : "Spotlight questionnaire with your name and role."}
+            </p>
+          </CardBody>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader
+            title="What are you submitting?"
+            description="Your choice controls the questions and whether your name is collected."
+          />
+          <CardBody className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Submission type">
+              {types.map((type) => {
+                const selected = submissionTypeId === type.id;
+                const tip = isSafetyTipType(type);
+                return (
+                  <button
+                    key={type.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    onClick={() => {
+                      setSubmissionTypeId(type.id);
+                      setErrors({});
+                      setFormError("");
+                    }}
+                    className={
+                      selected
+                        ? "rounded-xl border-2 border-accent bg-accent-soft/40 p-4 text-left shadow-sm"
+                        : "rounded-xl border border-border bg-white p-4 text-left hover:border-accent/50"
+                    }
+                  >
+                    <p className="font-semibold text-navy">{type.name}</p>
+                    <p className="mt-1 text-sm text-muted">
+                      {tip
+                        ? "One anonymous tip. No name required."
+                        : "Spotlight questionnaire with your name and role."}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+            <FieldError message={errors.submissionTypeId} />
+          </CardBody>
+        </Card>
+      )}
 
       {!anonymous && submissionTypeId ? (
         <Card>

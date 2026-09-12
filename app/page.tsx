@@ -22,7 +22,7 @@ export default function Home() {
               Answer the four spotlight questions about your mining career.
             </p>
             <Link
-              href="/employee-submit"
+              href="/employee-submit?type=spotlight"
               className="mt-5 inline-flex h-12 items-center justify-center rounded-lg bg-accent px-5 text-base font-medium text-white hover:bg-accent-hover"
             >
               Start a spotlight
@@ -34,7 +34,7 @@ export default function Home() {
               Submit one anonymous tip. No name is required.
             </p>
             <Link
-              href="/employee-submit"
+              href="/employee-submit?type=safety-tip"
               className="mt-5 inline-flex h-12 items-center justify-center rounded-lg bg-accent px-5 text-base font-medium text-white hover:bg-accent-hover"
             >
               Share a safety tip
